@@ -1,0 +1,240 @@
+/* style.css — all interface styling: stage scaling, dialogue, menus, overlays.
+   The room itself is drawn on the canvas by the scripts. System fonts only; nothing is downloaded. */
+
+:root {
+  --cream: #f6ead9;
+  --cream-dark: #e4d3ba;
+  --paper: #fbf7f0;
+  --wood: #a87a4c;
+  --sage: #7d9170;
+  --sage-dark: #5c7052;
+  --sage-light: #a9b99c;
+  --clay: #c98f6b;
+  --ink: #2a1f1a;
+  --gold: #e2b857;
+  --night: #1c1512;
+  --serif: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
+  --sans: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+html, body { margin: 0; height: 100%; background: var(--night); overflow: hidden; }
+[hidden] { display: none !important; }
+noscript { position: absolute; left: 16px; top: 16px; color: var(--cream); font: 16px var(--sans); }
+
+/* The stage is always 768 x 448 and is scaled to fit the window by game.js. */
+#stage {
+  position: absolute; left: 50%; top: 50%;
+  width: 768px; height: 448px;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  overflow: hidden;
+  background: var(--night);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-user-select: none; user-select: none;
+  cursor: default;
+}
+/* :where() keeps these resets at the lowest priority, so the spacing rules further down win. */
+:where(#stage) button { font: inherit; color: inherit; cursor: pointer; }
+:where(#stage) button:focus { outline: none; }
+:where(#stage) p, :where(#stage) h1, :where(#stage) h2, :where(#stage) h3 { margin: 0; }
+
+.view {
+  position: absolute; left: 0; top: 0; width: 768px; height: 448px;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
+
+/* ---------- in-room interface ---------- */
+.chip {
+  position: absolute; left: 14px; top: 12px;
+  background: var(--ink); color: var(--cream);
+  font-size: 13px; font-weight: 600; line-height: 1;
+  padding: 7px 10px; border-radius: 2px;
+}
+.hint {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  background: rgba(42, 31, 26, 0.9); color: var(--cream);
+  font-size: 14px; line-height: 1.2; white-space: nowrap;
+  padding: 8px 14px; border-radius: 3px;
+}
+
+/* ---------- dialogue: three voices that look different ---------- */
+.dialog {
+  position: absolute; left: 20px; right: 20px; bottom: 14px;
+  min-height: 86px; box-sizing: border-box;
+  padding: 14px 50px 14px 20px;
+}
+.dialog .line { font-size: 19px; line-height: 1.38; }
+.dialog .off { visibility: hidden; }
+.dialog .who { font-size: 13px; font-weight: 600; line-height: 1; }
+.dialog .more {
+  position: absolute; right: 14px; bottom: 12px;
+  width: 20px; height: 20px; box-sizing: border-box;
+  border: 2px solid currentColor; border-radius: 3px;
+  font: 600 12px/16px var(--sans); text-align: center; font-style: normal;
+  opacity: 0.75;
+}
+
+/* a thought: the persona's inner voice */
+.dialog.thought {
+  background: var(--cream); border: 2px solid var(--ink); border-radius: 24px;
+  box-shadow: 4px 4px 0 var(--ink);
+  font-family: var(--serif); font-style: italic;
+}
+.dialog.thought::before, .dialog.thought::after {
+  content: ""; position: absolute; background: var(--cream); border: 2px solid var(--ink); border-radius: 50%;
+}
+.dialog.thought::before { left: 38px; top: -19px; width: 13px; height: 13px; }
+.dialog.thought::after { left: 26px; top: -32px; width: 7px; height: 7px; }
+.dialog.thought .who { font-family: var(--sans); font-style: normal; color: var(--sage-dark); margin-bottom: 6px; }
+
+/* narration: what happens, with no speaker */
+.dialog.narr { background: rgba(28, 21, 18, 0.94); color: var(--cream); border: 2px solid rgba(246, 234, 217, 0.32); border-radius: 3px; }
+
+/* speech: someone else talking */
+.dialog.speech {
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 3px;
+  box-shadow: 4px 4px 0 var(--ink); padding-top: 20px;
+}
+.dialog.speech .who {
+  position: absolute; left: 14px; top: -13px;
+  background: var(--ink); color: var(--cream); padding: 6px 10px; border-radius: 2px;
+}
+
+/* ---------- choices and the pause menu ---------- */
+.opt {
+  display: block; width: 100%; box-sizing: border-box; text-align: left;
+  font-size: 16px; line-height: 1.3;
+  padding: 9px 12px; margin-top: 7px;
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 2px;
+}
+.opt.on { background: var(--gold); box-shadow: 3px 3px 0 var(--ink); }
+
+.choice {
+  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+  width: 580px; box-sizing: border-box;
+  background: var(--cream); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink);
+  padding: 14px 16px 16px;
+}
+.choice .prompt { font-family: var(--serif); font-style: italic; font-size: 19px; line-height: 1.35; margin-bottom: 4px; }
+
+.pause, .screen {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  background: rgba(28, 21, 18, 0.74);
+  display: flex; align-items: center; justify-content: center;
+}
+.pause .panel {
+  width: 280px; background: var(--cream); border: 2px solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
+  padding: 18px 18px 20px;
+}
+.pause h2 { font-family: var(--serif); font-size: 24px; font-weight: 400; margin-bottom: 8px; }
+
+/* ---------- overlays: the screens and papers the persona looks at ---------- */
+.screen { flex-direction: column; }
+.closehint { margin-top: 8px; color: var(--cream); font-size: 13px; }
+.win { box-sizing: border-box; color: #202124; }
+
+/* a browser full of answers. Deliberately busier than the rest of the game. */
+.browser { width: 660px; background: #fff; border: 2px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); font-size: 13px; }
+.browser .tabs { display: flex; gap: 2px; background: #dde1e6; padding: 5px 6px 0; }
+.browser .tab {
+  flex: 1 1 0; min-width: 0; padding: 5px 8px; font-size: 11px; color: #4a4f55;
+  background: #c9ced5; border-radius: 6px 6px 0 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.browser .tab.on { background: #fff; color: #202124; }
+.browser .bar { padding: 5px 10px; border-bottom: 1px solid #e3e5e8; }
+.browser .url { display: block; background: #f1f3f4; border-radius: 14px; padding: 4px 12px; font-size: 13px; color: #202124; }
+.browser .res { display: flex; align-items: center; gap: 12px; padding: 4px 12px 5px; border-bottom: 1px solid #ececec; }
+.browser .res:last-child { border-bottom: 0; }
+.browser .res.sponsored { background: #fffbea; }
+.browser .resmain { flex: 1 1 auto; min-width: 0; }
+.browser .resmeta { font-size: 11px; line-height: 1.25; color: #1e6b34; }
+.browser .tag { display: inline-block; margin-right: 6px; padding: 0 5px; border: 1px solid #9aa0a6; border-radius: 3px; color: #4a4f55; font-size: 10px; font-weight: 600; }
+.browser .tag.ad { background: #f6c945; border-color: #c79a12; color: #3a2c00; }
+.browser .ttl { font-size: 14px; line-height: 1.25; color: #1a0dab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.browser .ln { font-size: 12px; line-height: 1.25; color: #4d5156; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.browser .price { flex: 0 0 auto; min-width: 86px; text-align: right; font-size: 16px; font-weight: 700; color: #202124; }
+.browser .price.none { font-size: 11px; font-weight: 400; font-style: italic; color: #80868b; }
+
+/* a phone: a store app, a calendar, a message thread */
+.phone {
+  width: 286px; background: #fff; border: 7px solid var(--ink); border-radius: 28px;
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.45); overflow: hidden; font-size: 13px;
+}
+.phone .app { background: var(--ink); color: #fff; font-size: 13px; font-weight: 600; padding: 12px 16px 8px; }
+.phone .head { padding: 9px 16px 7px; font-size: 15px; font-weight: 600; border-bottom: 1px solid #e6e6e6; }
+.phone .row { position: relative; padding: 8px 16px 9px; border-bottom: 1px solid #ededed; }
+.phone .rt { font-size: 14px; font-weight: 600; line-height: 1.25; }
+.phone .rl { font-size: 12px; line-height: 1.3; color: #5f6368; margin-top: 1px; }
+.phone .badge { display: inline-block; margin-top: 5px; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; background: #e8eaed; color: #3c4043; }
+.phone .badge.ok { background: #d9f0dc; color: #17602a; }
+.phone .badge.warn { background: #fdeccb; color: #7a4b00; }
+.phone .badge.bad { background: #fadad7; color: #8c1d18; }
+.phone .foot { padding: 9px 16px 13px; font-size: 12px; line-height: 1.35; color: #5f6368; }
+
+/* paper: a card on the fridge, a manual, a page of a notebook */
+.paper {
+  width: 400px; background: #fffdf6; border: 1px solid #c9b99b; box-shadow: 5px 6px 0 rgba(0, 0, 0, 0.4);
+  padding: 20px 24px 22px; transform: rotate(-1.2deg);
+  font-family: var(--serif); color: var(--ink);
+}
+.paper .ptitle { font-size: 20px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #d8cbb0; }
+.paper .pl { font-size: 16px; line-height: 1.5; }
+.paper .pl.struck { text-decoration: line-through; text-decoration-color: #b5493b; color: #7b6c5c; }
+
+/* ---------- title cards and the ending ---------- */
+.card {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  background: var(--night); color: var(--cream);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+}
+.card .time { font-family: var(--serif); font-size: 40px; line-height: 1.15; }
+.card .place { margin-top: 10px; font-size: 18px; color: var(--sage-light); max-width: 560px; line-height: 1.4; }
+
+.card.ending { justify-content: flex-start; padding-top: 34px; box-sizing: border-box; }
+.portrait { image-rendering: pixelated; image-rendering: crisp-edges; }
+.card.ending .portrait { width: 60px; height: 84px; }
+.card.ending .endname { margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--sage-light); }
+.card.ending .endlines { margin-top: 20px; width: 560px; min-height: 190px; }
+.card.ending .endline { font-family: var(--serif); font-size: 20px; line-height: 1.4; margin-bottom: 16px; text-wrap: balance; }
+.card.ending .endprompt { position: absolute; left: 0; right: 0; bottom: 20px; font-size: 14px; color: var(--gold); }
+
+/* ---------- menus ---------- */
+.menu { position: absolute; left: 0; top: 0; width: 100%; height: 100%; box-sizing: border-box; }
+
+.menu.title { background: #3a2c22; }
+.menu.title .bg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+.menu.title .titlebox {
+  position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box;
+  padding: 90px 44px 34px;
+  background: linear-gradient(to bottom, rgba(28, 21, 18, 0), rgba(28, 21, 18, 0.9) 58%);
+  color: var(--cream);
+}
+.menu.title h1 { font-family: var(--serif); font-weight: 400; font-size: 46px; line-height: 1.08; }
+.menu.title .sub { margin-top: 8px; font-size: 18px; line-height: 1.4; max-width: 520px; }
+.menu.title .go { display: inline-block; width: auto; margin-top: 20px; padding: 10px 18px; font-weight: 600; }
+
+.menu.pick { background: var(--cream); padding: 40px 44px 0; }
+.menu.pick .ask { font-family: var(--serif); font-weight: 400; font-size: 32px; line-height: 1.15; }
+.menu.pick p.ask { font-size: 20px; line-height: 1.4; }
+.cards { display: flex; gap: 22px; margin-top: 26px; }
+.pcard {
+  flex: 1 1 0; min-width: 0; min-height: 214px; box-sizing: border-box; text-align: left; vertical-align: top;
+  display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start;
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 3px; box-shadow: 5px 5px 0 var(--ink);
+  padding: 20px 20px 18px;
+}
+.pcard.on { background: #fff; border-color: var(--ink); box-shadow: 5px 5px 0 var(--gold), 0 0 0 4px var(--gold); }
+.pcard h3 { font-family: var(--serif); font-weight: 400; font-size: 27px; line-height: 1.15; }
+.pcard .pitch { margin-top: 10px; font-size: 16px; line-height: 1.42; }
+.pcard .meta { margin-top: 5px; font-size: 13px; color: var(--sage-dark); font-weight: 600; }
+.pcard.level .pitch { margin-bottom: auto; padding-bottom: 14px; }
+.pcard.persona { flex-direction: row; gap: 16px; }
+.pcard.persona .portrait { flex: 0 0 auto; width: 80px; height: 112px; background: var(--cream-dark); border: 2px solid var(--ink); border-radius: 2px; }
+.pcard.persona .ptext { flex: 1 1 auto; min-width: 0; }
+.pcard.persona h3 { font-size: 24px; }
+.pcard .role { margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--sage-dark); line-height: 1.3; }
+.pcard.persona .pitch { font-size: 15px; }
+.pcard .tag { margin-top: 10px; font-family: var(--serif); font-style: italic; font-size: 15px; line-height: 1.4; }
+.backhint { position: absolute; left: 44px; bottom: 18px; font-size: 13px; color: #6f5f50; }

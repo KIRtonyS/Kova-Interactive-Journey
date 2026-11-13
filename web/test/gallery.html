@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Room gallery (dev only)</title>
+<style>
+  body { margin: 0; background: #1c1512; font: 12px system-ui, sans-serif; color: #f6ead9; }
+  .cell { display: inline-block; width: 768px; vertical-align: top; }
+  .cap { height: 20px; line-height: 20px; padding-left: 6px; }
+  canvas { display: block; width: 768px; height: 448px; image-rendering: pixelated; image-rendering: crisp-edges; }
+</style>
+</head>
+<body>
+<div id="out"></div>
+<script src="../js/art.js"></script>
+<script src="../js/props.js"></script>
+<script src="../js/rooms.js"></script>
+<script>
+/* Dev page: draws rooms for review. ?scenes=0,1,2 picks from the list below; no query draws them all.
+   &marks=1 adds the gold marker over every object with an id. */
+(function () {
+  var P = ART.PAL;
+  var HD = { store: 'HOME DEPOT', accent: P.hdOrange }, LW = { store: "LOWE'S", accent: P.lowesNavy };
+  var SCENES = [
+    { cap: 'L1 act1 bathroom old (David)', room: 'bathroom', s: { levelId: 'breaks', personaId: 'david', actIdx: 0, variant: 'old' } },
+    { cap: 'L1 act2 home (David)', room: 'home', s: { levelId: 'breaks', personaId: 'david', actIdx: 1 } },
+    { cap: 'L1 act2 home (Elena)', room: 'home', s: { levelId: 'breaks', personaId: 'elena', actIdx: 1 } },
+    { cap: 'L1 act3 store Home Depot (Elena)', room: 'store', info: HD, s: { levelId: 'breaks', personaId: 'elena', actIdx: 2 } },
+    { cap: 'L1 act4 bathroom, start (David)', room: 'bathroom', s: { levelId: 'breaks', personaId: 'david', actIdx: 3, variant: 'old' } },
+    { cap: 'L1 act4 bathroom, toilet removed', room: 'bathroom', s: { levelId: 'breaks', personaId: 'david', actIdx: 3, variant: 'old', done: { box: 1, valve: 1 } } },
+    { cap: 'L1 act4 bathroom, new toilet in', room: 'bathroom', s: { levelId: 'breaks', personaId: 'david', actIdx: 3, variant: 'old', done: { box: 1, valve: 1, toilet: 1 } } },
+    { cap: 'L2 act1 bathroom old (Maya)', room: 'bathroom', s: { levelId: 'project', personaId: 'maya', actIdx: 0, variant: 'old' } },
+    { cap: 'L2 act2 home (Maya)', room: 'home', s: { levelId: 'project', personaId: 'maya', actIdx: 1 } },
+    { cap: 'L2 act2 home (Elena)', room: 'home', s: { levelId: 'project', personaId: 'elena', actIdx: 1 } },
+    { cap: "L2 act3 store Lowe's (Maya)", room: 'store', info: LW, s: { levelId: 'project', personaId: 'maya', actIdx: 2 } },
+    { cap: 'L2 act4 bathroom new (Maya)', room: 'bathroom', s: { levelId: 'project', personaId: 'maya', actIdx: 3, variant: 'new' } }
+  ];
+  var q = {};
+  location.search.replace(/^\?/, '').split('&').forEach(function (kv) { var p = kv.split('='); if (p[0]) q[p[0]] = decodeURIComponent(p[1] || ''); });
+  var pick = q.scenes ? q.scenes.split(',').map(Number) : SCENES.map(function (_, i) { return i; });
+  var out = document.getElementById('out');
+  pick.forEach(function (idx) {
+    var sc = SCENES[idx]; if (!sc) return;
+    var s = Object.assign({ done: {}, flags: {}, pick: null }, sc.s);
+    var cell = document.createElement('div'); cell.className = 'cell';
+    var cap = document.createElement('div'); cap.className = 'cap'; cap.textContent = idx + ': ' + sc.cap;
+    var cv = document.createElement('canvas'); cv.width = ART.W; cv.height = ART.H;
+    cell.appendChild(cap); cell.appendChild(cv); out.appendChild(cell);
+    var sp = ROOMS.spawn(sc.room);
+    var marks = q.marks ? ROOMS.visible(sc.room, s).filter(function (it) { return it.id; }) : [];
+    ROOMS.render(cv.getContext('2d'), sc.room, s, 0, {
+      info: sc.info, markers: marks, actors: [{ x: sp.x, y: sp.y, look: s.personaId, dir: 'down', frame: 0 }]
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Playtest running</title>
+<!-- Relative paths resolve against the game folder, exactly as they do for index.html. -->
+<base href="../">
+<link rel="stylesheet" href="style.css">
+<style>#result { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; }</style>
+</head>
+<body>
+<!-- Dev page: the real game plus autoplay.js, which plays one path by itself. See autoplay.js for the query options. -->
+<div id="stage"></div>
+<pre id="result"></pre>
+<script src="js/art.js"></script>
+<script src="js/props.js"></script>
+<script src="js/rooms.js"></script>
+<script src="js/story.js"></script>
+<script src="js/game.js"></script>
+<script src="test/autoplay.js"></script>
+</body>
+</html>
