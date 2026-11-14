@@ -7,6 +7,12 @@
   var A = root.ART, P = A.PAL, S = A.shape, R = A.r;
   var K = {};
 
+  /* Sign words come from story.js (STORY.signs), so all words stay in one file. */
+  function word(key, fallback) {
+    var sg = root.STORY && root.STORY.signs;
+    return (sg && sg[key]) || fallback;
+  }
+
   /* ================= Bathroom ================= */
 
   // v: 'old' (leaking), 'removed', 'new'. Seen from above and in front: tank against the wall, bowl towards the room.
@@ -30,14 +36,11 @@
     if (v !== 'new') { R(ctx, x + cx - 6, y + 24, 1, 3, P.stain); R(ctx, x + cx + 5, y + 23, 1, 4, P.stain); R(ctx, x + cx - 9, y + 8, 4, 1, P.stain); }
   };
 
-  // water around the toilet base with soaked towels
-  K.puddle = function (ctx, x, y, w, h, v, t) {
-    var sh = Math.floor((t || 0) * 2) % 2;
-    S(ctx, x, y, [[6, 3, w - 10, h - 7, P.water], [2, 6, w - 6, h - 11, P.water], [10, 1, w - 20, h - 3, P.water]], false);
-    R(ctx, x + 12 + sh, y + 6, 6, 1, P.waterLight);
-    R(ctx, x + w - 16 - sh, y + h - 7, 5, 1, P.waterLight);
-    S(ctx, x, y, [[0, h - 10, 13, 8, P.creamDeep], [3, h - 12, 12, 6, P.creamDark]]);
-    R(ctx, x + 4, y + h - 10, 10, 1, P.clay);
+  // a plunger standing by the toilet
+  K.plunger = function (ctx, x, y, w, h) {
+    var cx = Math.floor(w / 2);
+    S(ctx, x, y, [[cx - 1, 0, 2, h - 6, P.woodLight], [cx - 5, h - 7, 10, 5, P.red], [cx - 6, h - 3, 12, 2, P.clayDark]]);
+    R(ctx, x + cx - 4, y + h - 6, 2, 2, '#d76a5c');
   };
 
   // v: 'old' (crowded, harsh light bar) | 'new'
@@ -98,7 +101,8 @@
   // cracked grout and a corner that never dries (old bathroom wall)
   K.tilewall = function (ctx, x, y, w, h, v) {
     if (v === 'new') return;
-    S(ctx, x, y, [[2, 6, w - 6, h - 12, P.mintDark], [0, 12, w - 2, h - 20, P.mintDark], [6, h - 9, w - 12, 4, '#7d9c88']], false);
+    var onPainting = root.SPRITES && root.SPRITES.mode === 'sprites';     // on a painted wall: only the cracks and the damp patch
+    if (!onPainting) S(ctx, x, y, [[2, 6, w - 6, h - 12, P.mintDark], [0, 12, w - 2, h - 20, P.mintDark], [6, h - 9, w - 12, 4, '#7d9c88']], false);
     var c = P.ink, pts = [[5, 8], [6, 10], [8, 12], [9, 15], [11, 17], [12, 20], [14, 22], [15, 25], [9, 16], [7, 18], [6, 21], [13, 12], [15, 10], [17, 9]];
     for (var i = 0; i < pts.length; i++) R(ctx, x + pts[i][0], y + pts[i][1], 1, 2, c);
     R(ctx, x + w - 10, y + 13, 6, 6, P.creamDeep);
@@ -150,14 +154,15 @@
       S(ctx, x, y, [[0, 12, w - 10, h - 12, P.card], [w - 14, 18, 14, h - 18, P.cardDark], [5, 0, w - 18, 13, P.card]]);
       R(ctx, x + 5, y + 5, w - 18, 2, P.creamDark);
       R(ctx, x, y + 20, w - 10, 2, P.creamDark);
-      A.text(ctx, 'KOHLER', x + 3, y + 25, P.ink);
+      A.text(ctx, word('kohler', 'KOHLER'), x + 3, y + 25, P.ink);
       R(ctx, x + w - 11, y + 22, 8, 5, P.white);
       return;
     }
     S(ctx, x, y, [[0, 4, w, h - 4, P.card]]);
     R(ctx, x, y + 10, w, 2, P.creamDark);
     R(ctx, x + w / 2 - 1, y + 4, 2, 6, P.creamDark);
-    if (w >= 26) A.text(ctx, 'KOHLER', x + Math.floor((w - 23) / 2), y + 15, P.ink);
+    var kw = word('kohler', 'KOHLER');
+    if (w >= A.textW(kw) + 3) A.text(ctx, kw, x + Math.floor((w - A.textW(kw)) / 2), y + 15, P.ink);
   };
 
   K.manual = function (ctx, x, y, w, h) {
@@ -409,7 +414,7 @@
   // Kohler end cap. v: 'toilet' (one boxed toilet) | 'bath' (a tub and vanity between other brands)
   K.endcap = function (ctx, x, y, w, h, v) {
     S(ctx, x, y, [[0, 0, w, h - 6, P.white], [0, h - 6, w, 6, P.greyLight]]);
-    A.sign(ctx, 'KOHLER', x + 4, y + 2, w - 8, 9, P.ink, P.white, 1);
+    A.sign(ctx, word('kohler', 'KOHLER'), x + 4, y + 2, w - 8, 9, P.ink, P.white, 1);
     if (v === 'bath') {
       S(ctx, x, y, [[3, 14, 10, h - 22, P.card], [w - 13, 14, 10, h - 22, P.cardDark]]);
       S(ctx, x, y, [[15, h - 20, w - 30, 12, P.white]]);
@@ -458,7 +463,8 @@
     var accent = (info && info.accent) || P.lowesNavy;
     S(ctx, x, y, [[0, 0, w, 9, P.woodLight], [0, 9, w, h - 9, P.greyLight]]);
     R(ctx, x, y + 9, w, 3, accent);
-    A.sign(ctx, 'PRO DESK', x + Math.floor((w - 40) / 2), y + 15, 40, 9, accent, P.white, 1);
+    var pd = word('proDesk', 'PRO DESK'), pw = A.textW(pd) + 9;
+    A.sign(ctx, pd, x + Math.floor((w - pw) / 2), y + 15, pw, 9, accent, P.white, 1);
     S(ctx, x, y, [[6, -6, 10, 8, P.ink]]);
     R(ctx, x + 7, y - 5, 8, 5, P.screen);
     S(ctx, x, y, [[w - 18, -2, 10, 4, P.white]]);
@@ -477,7 +483,25 @@
     R(ctx, x + 2, y + 12, Math.floor(w / 2) - 3, h - 12, P.glass);
     R(ctx, x + Math.floor(w / 2) + 1, y + 12, Math.floor(w / 2) - 3, h - 12, P.glass);
     R(ctx, x + 4, y + 14, 3, h - 18, P.glassLight); R(ctx, x + Math.floor(w / 2) + 3, y + 14, 3, h - 18, P.glassLight);
-    A.sign(ctx, 'EXIT', x + Math.floor((w - 22) / 2), y, 22, 9, P.red, P.white, 1);
+    var ex = word('exit', 'EXIT'), ew = A.textW(ex) + 7;
+    A.sign(ctx, ex, x + Math.floor((w - ew) / 2), y, ew, 9, P.red, P.white, 1);
+  };
+
+  // store dressing, for the code-drawn fallback: a pallet of cartons, a till, a flatbed cart
+  K.pallet = function (ctx, x, y, w, h) {
+    S(ctx, x, y, [[0, h - 5, w, 4, P.woodLight], [1, Math.floor(h / 2) - 2, w - 2, Math.ceil(h / 2) - 3, P.card], [3, 2, w - 8, Math.floor(h / 2) - 3, P.card]]);
+  };
+  K.checkout = function (ctx, x, y, w, h) {
+    S(ctx, x, y, [[0, 8, w, h - 8, P.greyLight], [0, 6, w, 4, P.grey], [w - 14, 0, 10, 7, P.ink]]);
+    R(ctx, x + w - 13, y + 1, 8, 4, P.screen);
+  };
+  K.flatbed = function (ctx, x, y, w, h) {
+    S(ctx, x, y, [[0, h - 6, w - 4, 3, P.hdOrange], [w - 4, 0, 2, h - 4, P.greyDark], [2, 4, 10, h - 10, P.card], [13, 2, 10, h - 8, P.card], [24, 6, 9, h - 12, P.card]]);
+  };
+
+  // the mat at the bathroom door: the way out
+  K.exitmat = function (ctx, x, y, w, h) {
+    S(ctx, x, y, [[0, 2, w, h - 2, P.creamDeep], [3, 5, w - 6, h - 8, P.slate]]);
   };
 
   /* An NPC is drawn with the character renderer. look comes from the room item. */

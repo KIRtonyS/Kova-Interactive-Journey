@@ -30,11 +30,18 @@
      Three thoughts describe the gap in words and are NOT updated from here:
      "half the price", "$150 less" (twice) and "the Arc is the Highline".
      Search for them if the prices or names change.
+
+     Names, numbers and box contents (`boxName`, `number`, `inBox`) were
+     checked on 13 Nov 2026 against Kohler's spec sheets for K-43999 and
+     K-78253 and its two-piece installation guide. "-0" is Kohler's code
+     for White. The Highline is sold as a bowl and a tank; the Highline Arc
+     is a "Complete Solution" kit. Neither includes a supply line.
      ------------------------------------------------------------------ */
   var FACTS = {
     checked: '22 Oct 2026',
-    kohlerSite: { model: 'Highline', number: 'K-43999', price: '$343.57', reviews: '32' },
-    homeDepot: { model: 'Highline Arc', number: 'K-78253-0', price: '$189', reviews: '14,800', stock: '5 in stock, pickup today', aisle: 'Aisle 25, Bay 006' },
+    kohlerSite: { model: 'Highline', number: 'K-43999-0', price: '$343.57', reviews: '32', inBox: 'a bowl and a tank' },
+    homeDepot: { model: 'Highline Arc', boxName: 'Highline Arc The Complete Solution', number: 'K-78253-0', price: '$189', reviews: '14,800',
+      stock: '5 in stock, pickup today', aisle: 'Aisle 25, Bay 006', inBox: 'bowl, tank, seat, wax ring and hardware' },
     lowes: { model: 'Elliston', price: '$269' },
     findOnDisplay: "We're sorry, but this product is not available on display near you."
   };
@@ -46,6 +53,20 @@
     title: 'The Kohler Customer Journey',
     subtitle: 'Five minutes in a customer\'s shoes, buying for a bathroom the way it works today.',
     facts: FACTS,
+
+    /* Words painted on signs in the rooms. The Home Depot aisle signs follow the Level 1 facts:
+       the bath aisle, and the aisles before and after it. */
+    signs: {
+      aisle: HD.aisle.split(',')[0].toUpperCase(),
+      aisleBefore: 'AISLE ' + (parseInt(/\d+/.exec(HD.aisle)[0], 10) - 1),
+      aisleAfter: 'AISLE ' + (parseInt(/\d+/.exec(HD.aisle)[0], 10) + 1),
+      bath: 'BATH',
+      plumbing: 'PLUMBING',
+      tile: 'TILE',
+      kohler: 'KOHLER',
+      proDesk: 'PRO DESK',
+      exit: 'EXIT'
+    },
 
     /* Interface words. */
     ui: {
@@ -64,7 +85,8 @@
       resume: 'Resume',
       restart: 'Restart level',
       mainMenu: 'Main menu',
-      endPrompt: 'Press Enter to choose another journey'
+      endPrompt: 'Press Enter to choose another journey',
+      credits: 'Character and room art: Liberated Pixel Cup contributors, CC-BY-SA 3.0 / GPL 3.0. Font: Jersey 10, OFL. See assets/CREDITS.md.'
     },
 
     personas: {
@@ -78,14 +100,14 @@
         name: 'David', age: 52, look: 'david',
         role: 'Mid-career, a son in college, a mother in her late 70s',
         tagline: '"She\'d never admit she needs it. I just don\'t want her to feel like she\'s in a hospital."',
-        trigger: { breaks: 'A scare in his mother\'s bathroom, twenty minutes from his own home.' }
+        trigger: { breaks: 'His mother\'s toilet has stopped flushing properly. She hasn\'t said a word.' }
       },
       elena: {
         name: 'Elena', age: 55, look: 'elena',
         role: 'Founder. Tracks her sleep, strength and bloodwork',
         tagline: '"If it helps me keep doing this on my own for 30 more years, I\'ll pay for it."',
         trigger: {
-          breaks: 'Five days ago she slipped on a leaking bathroom floor and hurt her hip.',
+          breaks: 'Her toilet takes two flushes now, and the low seat is getting harder to stand up from.',
           project: 'A milestone birthday, and a plan to be strong and independent at 85.'
         }
       }
@@ -94,67 +116,69 @@
     levels: [
 
       /* ================================================================
-         LEVEL 1 — WHEN IT BREAKS (David or Elena, Home Depot)
+         LEVEL 1 — NOT WHAT IT USED TO BE (David or Elena, Home Depot)
+         The toilet still works, just not well. Nothing forces a decision,
+         so the friction is doubt, and the pull of putting it off.
          ================================================================ */
       {
         id: 'breaks',
-        name: 'When It Breaks',
-        pitch: 'A fixture fails. You need it solved soon. Repair it, replace it, or call someone?',
+        name: 'Not What It Used to Be',
+        pitch: 'It still works. Just not well. Fix it, replace it, or live with it a little longer?',
         minutes: 5,
         personas: ['david', 'elena'],
         store: 'Home Depot',
 
         acts: [
-          /* ---------- Act 1: Bathroom (old, leaking) ---------- */
+          /* ---------- Act 1: Bathroom (old) ---------- */
           {
             room: 'bathroom', variant: 'old',
             chip: { david: 'Mom\'s bathroom', elena: 'Your bathroom' },
-            card: { time: 'Tuesday, 6:48 AM', line: { david: 'Your mother\'s house, before work.', elena: 'Your bathroom. Day five of the leak.' } },
+            card: { time: 'Tuesday, 7:10 AM', line: { david: 'Your mother\'s house, on the way to work.', elena: 'Your bathroom, back from the gym.' } },
             stages: [],
             intro: [
-              { t: { david: 'Mom said it was "a little damp". This is not a little damp.',
-                     elena: 'Five days since I slipped in here. The bruise is fading. The leak is not.' } }
+              { t: { david: 'Mom asked me to "take a look at the toilet". She never asks for anything.',
+                     elena: 'Leg day. And this toilet has been getting on my nerves for months.' } }
             ],
             things: {
               toilet: {
                 label: 'Toilet', req: true, stages: ['Trigger'],
                 steps: [
-                  { n: 'The toilet rocks when you press on it. Water is pooling at the base.' },
-                  { t: { david: 'She nearly went down right here. She would never tell me how close it was.',
-                         elena: 'One wet floor, and I was on the ground. That is how fast it can go.' } }
+                  { n: 'One flush. The bowl barely clears. A second flush, and the tank hisses for a minute.' },
+                  { t: { david: 'She has been flushing twice and holding the handle down. For how long? And why didn\'t she say?',
+                         elena: 'Two flushes, twice a day, every day. And I need a hand on the sink to get up off this low seat.' } }
                 ]
               },
               toolbox: {
                 label: 'Toolbox', req: true, after: ['toilet'], stages: ['Hesitation'],
-                locked: 'Look at the toilet first.',
+                locked: 'Try the toilet first.',
                 steps: [
-                  { n: 'You tighten both bolts. The rocking stops. A minute later, a slow drip is back.' },
-                  { t: { david: 'Fix it or replace it? I have one free Saturday and no idea which is right.',
-                         elena: 'Repair or replace. I want evidence, not a guess. I have neither.' } }
+                  { n: 'Under the lid: a warped flapper, a kinked chain. You straighten it. One good flush. Then not.' },
+                  { t: { david: 'It still works, sort of. Do I fix a twenty-year-old toilet, or replace it?',
+                         elena: 'Technically it works. Is that good enough? I have no data either way.' } }
                 ]
               },
-              puddle: {
-                label: 'Wet towels', stages: ['Trigger'],
+              plunger: {
+                label: 'Plunger', stages: ['Trigger'],
                 steps: [
-                  { n: 'Soaked towels. The water has worked its way into the grout.' },
-                  { t: { david: 'She has been mopping this up on her own. For how long?',
-                         elena: 'I have stepped around this for five days. That is not a plan.' } }
+                  { n: { david: 'A plunger, the price sticker still on the handle.', elena: 'A plunger, tucked behind the toilet.' } },
+                  { t: { david: 'New. She bought it and never mentioned it. That is how she handles things.',
+                         elena: 'Bought two months ago. Used more often than I would like to admit.' } }
                 ]
               },
               vanity: {
                 label: 'Sink', stages: ['Trigger'],
                 steps: [
                   { n: 'A chipped basin. A faucet that drips to its own beat.' },
-                  { t: { david: 'Everything in here is the same age. If one thing goes, the rest will follow.',
-                         elena: 'All of it went in the same year. This will not be the last failure.' } }
+                  { t: { david: 'Everything here is the same age. The rest will follow.',
+                         elena: 'All of it went in the same year. This will not be the last thing to wear out.' } }
                 ]
               }
             },
             needs: ['toilet', 'toolbox'],
             exit: 'door',
-            notYet: 'Not yet. Look at the toilet and try the toolbox.',
+            notYet: 'Not yet. Try the toilet, then the toolbox.',
             leave: [
-              { t: { david: 'I can\'t solve this before work. Tonight.', elena: 'Tonight I do the research.' } }
+              { t: { david: 'It can wait until tonight. It has waited this long.', elena: 'Tonight I look into it properly.' } }
             ]
           },
 
@@ -170,21 +194,20 @@
                 steps: [
                   { screen: {
                     kind: 'browser',
-                    tabs: ['toilet leaking at base', 'repair or replace toilet?', 'best toilets 2026', 'Kohler ' + K.model, 'wax ring sizes'],
-                    query: 'toilet leaking at base fix or replace',
+                    tabs: ['toilet weak flush', 'flapper replacement', 'repair or replace toilet?', 'Kohler ' + K.model, 'comfort height toilet'],
+                    query: 'toilet weak flush fix or replace',
                     results: [
                       { tag: 'Sponsored', sponsored: true, site: 'homedepot.com', title: CHEAP.name + ' 2-Piece Toilet, Top Rated', line: 'Pickup today. ' + CHEAP.reviews + ' reviews.', price: CHEAP.price },
-                      { tag: 'Video', site: 'youtube.com', title: 'Fix a leaking toilet base in 15 minutes', line: '"If the flange is cracked, stop here."' },
-                      { tag: 'Sponsored', sponsored: true, site: 'A review site', title: 'The 7 best toilets of 2026, ranked', line: 'We may earn a commission from these links.' },
-                      { site: 'amazon.com', title: 'Aldermere Elongated Toilet, Amazon\'s Choice', line: 'Arrives Thursday. A seller you have not heard of.', price: '$142' },
-                      { tag: 'Forum', site: 'reddit.com', title: 'Leaking at the base. Wax ring or new toilet?', line: '43 replies. They do not agree.' },
-                      { site: 'kohler.com', title: 'Kohler ' + K.model + ' toilet', line: K.reviews + ' reviews. About two weeks by truck, left at the curb. No installation offered.', price: K.price }
+                      { tag: 'Video', site: 'youtube.com', title: 'Weak flush? A $12 flapper fixes it', line: '"If that does not work, it might be time for a new toilet."' },
+                      { tag: 'Article', site: 'A home site', title: '7 signs it\'s time to replace your toilet', line: 'You have three of them. Or maybe two.' },
+                      { tag: 'Forum', site: 'reddit.com', title: 'Old toilet, weak flush. Fix or replace?', line: '58 replies. They do not agree.' },
+                      { site: 'kohler.com', title: 'Kohler ' + K.model + ' toilet', line: K.reviews + ' reviews. Two weeks, left at the curb. Installation extra, in some ZIP codes.', price: K.price }
                     ]
                   } },
-                  { t: { david: 'If I\'m replacing it anyway, I want the Kohler. Solid, a better height for her. It is also two weeks away.',
-                         elena: 'If I replace it, I buy the one built to last. That is the Kohler: ' + K.reviews + ' reviews, two weeks by truck.' } },
-                  { t: { david: 'Mom can\'t mop for two more weeks. Can I get that one nearby?',
-                         elena: 'I am not stepping around a puddle for two more weeks. Is it in a store?' } }
+                  { t: { david: 'If I\'m replacing it anyway, I want something better for her. The Kohler. Two weeks away.',
+                         elena: 'If I replace it, I buy the one built to last. The Kohler, with ' + K.reviews + ' reviews.' } },
+                  { t: { david: 'Or a twelve-dollar part. Nothing is forcing this. That makes it harder.',
+                         elena: 'Or a twelve-dollar part. With no deadline, every option looks reasonable.' } }
                 ]
               },
               phone: {
@@ -207,16 +230,16 @@
               fridge: {
                 label: 'Card on the fridge', stages: ['Hesitation'],
                 steps: [
-                  { screen: { kind: 'paper', title: 'Harlan & Sons Plumbing', lines: ['Earliest visit: next Thursday.', 'Diagnostic fee: $95, before any work.', 'We supply and fit our own fixtures.'] } },
+                  { screen: { kind: 'paper', title: 'Harlan & Sons Plumbing', lines: ['Weak flush? Usually a $12 part.', 'Earliest visit: next Thursday.', 'Diagnostic fee: $95, before any work.'] } },
                   { choice: {
                     prompt: 'Call the plumber, or do it yourself?',
                     options: [
                       { label: 'Book the plumber for next Thursday', set: { plumber: true },
-                        then: [{ t: { david: 'Nine more days of towels on her floor. And he fits whatever is on his truck.',
-                                      elena: 'Nine more days, a fee to look at it, and he picks the brand.' } }] },
-                      { label: 'Do it myself this weekend',
-                        then: [{ t: { david: 'Saturday, then. I have watched exactly one video.',
-                                      elena: 'I can lift it. Whether I should, with this hip, is another question.' } }] }
+                        then: [{ t: { david: 'Ninety-five dollars to hear it\'s the flapper. Or isn\'t.',
+                                      elena: 'A fee to look at it, and then he picks the brand.' } }] },
+                      { label: 'Do it myself',
+                        then: [{ t: { david: 'One weekend, one video. How hard can it be?',
+                                      elena: 'I can do this. I will want a second pair of hands.' } }] }
                     ]
                   } }
                 ]
@@ -232,7 +255,7 @@
               mother: {
                 label: 'Mom', only: 'david', stages: ['Hesitation'],
                 steps: [
-                  { s: 'Mom', text: 'It\'s just a toilet, David. Don\'t make a fuss.' },
+                  { s: 'Mom', text: 'It works fine if you hold the handle down, David. Don\'t make a fuss.' },
                   { t: { david: 'She\'d never admit she needs it. I just don\'t want her to feel like she\'s in a hospital.' } }
                 ]
               },
@@ -240,7 +263,7 @@
                 label: 'Training log', only: 'elena', stages: ['Hesitation'],
                 steps: [
                   { n: 'Sleep score: 84. Deadlift: up five pounds this month.' },
-                  { t: { elena: 'I track everything that protects my independence. Except this room.' } }
+                  { t: { elena: 'I log every rep. I never logged the second flush.' } }
                 ]
               }
             },
@@ -248,8 +271,19 @@
             exit: 'door',
             notYet: 'You do not have an answer yet. Try the laptop, then the phone.',
             leave: [
-              { t: { david: 'Home Depot is ten minutes from here. Saturday morning.',
-                     elena: 'The big-box store is ten minutes away. Saturday.' } }
+              { choice: {
+                prompt: 'The store is ten minutes away. When do you go?',
+                options: [
+                  { label: 'Go on Saturday',
+                    then: [{ t: { david: 'Saturday, before I talk myself out of it.', elena: 'Saturday. I will decide in the aisle.' } }] },
+                  { label: 'Live with it a bit longer', set: { waited: true },
+                    then: [
+                      { n: 'Three weeks go by. The second flush becomes habit.' },
+                      { t: { david: 'Then Mom mentions she has stopped having friends over. Saturday.',
+                             elena: 'Then I push off the sink again, and finally log it. Saturday.' } }
+                    ] }
+                ]
+              } }
             ]
           },
 
@@ -257,24 +291,27 @@
           {
             room: 'store',
             chip: 'Home Depot',
-            card: { time: 'Saturday, 9:40 AM', line: 'Home Depot. ' + HD.aisle + '.' },
+            card: {
+              time: function (s) { return s.flags.waited ? 'Three weeks later, a Saturday' : 'Saturday, 9:40 AM'; },
+              line: 'Home Depot. ' + HD.aisle + '.'
+            },
             stages: ['Go to the Store'],
             intro: [
-              { n: 'Ten minutes from the door. The bath aisle is at the back of the store.' }
+              { n: 'The bath aisle is at the back of the store.' }
             ],
             things: {
               display: {
                 label: 'Toilet display', req: true, stages: ['See Kohler on Display'],
                 steps: [
-                  { n: 'Eleven toilets. Five are still in boxes. None is plumbed in.' },
-                  { t: { david: 'I can\'t sit on a box. Which one is easy for her to stand up from?',
-                         elena: 'Height, flush, footprint. I cannot test one of them from here.' } }
+                  { n: 'Eleven toilets, five still boxed. None is plumbed in.' },
+                  { t: { david: 'I can\'t sit on a box. Which one is easier for her to stand up from?',
+                         elena: 'Seat height, flush, footprint. I cannot test one of them from here.' } }
                 ]
               },
               kohler: {
                 label: 'Kohler shelf', req: true, stages: ['See Kohler on Display'],
                 steps: [
-                  { n: 'One Kohler box: ' + HD.model + ', ' + HD.number + '. The one you saved says ' + K.model + ', ' + K.number + '.' },
+                  { n: 'One Kohler box: ' + HD.boxName + ', ' + HD.number + '. You saved ' + K.model + ', ' + K.number + '.' },
                   { t: { david: 'A different name, a different number, half the price. The same toilet, or the cheap version?',
                          elena: 'A different model number, $150 less. A bargain or a lesser product. The box does not say.' } }
                 ]
@@ -287,8 +324,8 @@
                     options: [
                       { label: 'Is the ' + HD.model + ' the same as the ' + K.model + ' online?',
                         then: [{ s: 'Associate', text: 'Honestly? I\'m in lighting today. If it says Kohler on the box, it\'s a Kohler.' }] },
-                      { label: 'Which of these is easiest to live with?',
-                        then: [{ s: 'Associate', text: 'They all flush about the same. That one sells a lot.' }] }
+                      { label: 'Mine still works, just badly. Repair or replace?',
+                        then: [{ s: 'Associate', text: 'Could be the flapper, could be time. Flappers are one aisle over. Up to you.' }] }
                     ]
                   } },
                   { t: { david: 'He is being kind. He does not know.', elena: 'A polite non-answer. I am on my own.' } }
@@ -297,8 +334,8 @@
               shopper: {
                 label: 'Another shopper', stages: ['Decide'],
                 steps: [
-                  { s: 'Another shopper', text: 'Mine broke Thursday. I just grabbed whatever was in stock.' },
-                  { t: { david: 'That is most of us, I suppose.', elena: 'That is how most of these get chosen.' } }
+                  { s: 'Another shopper', text: 'Mine\'s fifteen years old. Still works, mostly. I\'m just looking.' },
+                  { t: { david: 'Just looking. Same as me, if I\'m honest.', elena: 'Nobody in this aisle is in a hurry. Nobody is deciding, either.' } }
                 ]
               },
               shelf: {
@@ -306,12 +343,13 @@
                 locked: 'You are not ready to choose. Look at the displays and ask someone.',
                 steps: [
                   { choice: {
-                    prompt: 'Three ways to end this.',
+                    prompt: 'It still works. Which way do you go?',
                     options: [
                       { label: 'Order the ' + K.model + ' from kohler.com. ' + K.price + ', about two weeks.', set: { pick: 'kohlercom' },
                         then: [
-                          { n: 'Ordered on your phone, standing in the aisle. Delivery: curbside, in about two weeks.' },
-                          { t: { david: 'Two more weeks of towels on Mom\'s floor.', elena: 'Two more weeks of stepping around it.' } }
+                          { n: 'Ordered on your phone, in the aisle. Curbside, in about two weeks.' },
+                          { t: { david: 'The one I wanted. Mom will flush twice a little longer.',
+                                 elena: 'The one I trust, two weeks out. Nothing made me rush.' } }
                         ] },
                       { label: 'Take the ' + HD.model + ' off this shelf. ' + HD.price + ', today.', set: { pick: 'shelf' },
                         then: [
@@ -321,7 +359,7 @@
                       { label: 'Take the ' + CHEAP.name + '. ' + CHEAP.price + ', today.', set: { pick: 'other' },
                         then: [
                           { n: 'The box goes in the cart. It weighs less than you expected.' },
-                          { t: { david: 'It\'s fine. It\'s a toilet. It\'s fine.', elena: 'Cheapest and fastest. I did exactly what the search results wanted.' } }
+                          { t: { david: 'It flushes. That is all the old one had to do.', elena: 'Cheapest and fastest. I did exactly what the search results wanted.' } }
                         ] }
                     ]
                   } }
@@ -332,7 +370,7 @@
             exit: 'door',
             notYet: 'You came here to leave with an answer.',
             leave: [
-              { n: 'You leave with an empty cart and a confirmation email. It says "curbside".', when: function (s) { return s.pick === 'kohlercom'; } },
+              { n: 'You leave with an empty cart and an email that says "curbside".', when: function (s) { return s.pick === 'kohlercom'; } },
               { n: 'At checkout, a sign: "Need this installed? Call us." A phone number, not a date.', when: function (s) { return s.pick !== 'kohlercom'; } }
             ]
           },
@@ -347,24 +385,36 @@
             },
             stages: [],
             intro: [
-              { n: 'The truck left the box at the curb. Getting it up the steps was your job.', when: function (s) { return s.pick === 'kohlercom'; } }
+              { n: 'The box was left at the curb. The steps were your job.', when: function (s) { return s.pick === 'kohlercom'; } },
+              { n: 'You cancelled the plumber. He kept a $25 fee.', when: function (s) { return !!s.flags.plumber; } }
             ],
             things: {
               box: {
                 label: 'Box', req: true, stages: ['Buy & Arrange Install'],
                 steps: [
-                  { n: 'Inside: the toilet, two bolts and a 14-page manual. No wax ring.' },
-                  { t: { david: 'Back to the store, then. For a part nobody mentioned.',
-                         elena: 'A second trip for a three-dollar part nobody mentioned.' } }
+                  /* What is missing depends on what was bought (see FACTS). The third brand is invented. */
+                  { n: function (s) {
+                    if (s.pick === 'shelf') return 'Inside: ' + HD.inBox + '. A two-page guide. No supply line.';
+                    if (s.pick === 'kohlercom') return 'Inside: ' + K.inBox + '. No seat, wax ring or supply line.';
+                    return 'Inside: the toilet, two bolts and a thin manual. No wax ring.';
+                  } },
+                  { t: {
+                    david: function (s) {
+                      return 'Back to the store, then. For ' + ({ shelf: 'a hose', kohlercom: 'three parts' }[s.pick] || 'a part') + ' nobody mentioned.';
+                    },
+                    elena: function (s) {
+                      return 'A second trip, for ' + ({ shelf: 'a hose', kohlercom: 'three parts' }[s.pick] || 'a three-dollar part') + ' nobody mentioned.';
+                    }
+                  } }
                 ]
               },
               valve: {
                 label: 'Water valve', req: true, after: ['box'], stages: ['Install & Live With It'],
                 locked: 'Open the box first.',
                 steps: [
-                  { n: 'Water off, tank drained. You lift the old toilet out and try not to think about your back.' },
-                  { t: { david: 'If I crack the flange, this becomes a plumber and another week.',
-                         elena: 'Sixty pounds, a bruised hip and no second pair of hands.' } }
+                  { n: 'Water off, tank drained. You lift the old toilet out. It is heavier than it looked.' },
+                  { t: { david: 'If I crack the flange now, I have turned a weak flush into a real problem.',
+                         elena: 'Ninety pounds, no second pair of hands. Lift with the legs.' } }
                 ]
               },
               toilet: {
@@ -372,44 +422,46 @@
                 req: true, after: ['valve'], stages: ['Install & Live With It'],
                 locked: 'The water is still on.',
                 steps: [
-                  { n: 'New ring, new toilet, bolts snug. You open the valve and flush. It holds.' },
-                  { t: { david: 'A dry floor. Did I get her the right one, or just a new one?',
-                         elena: 'It works. Whether it was the right one, I may never have the data.' } }
+                  { n: 'New ring, new toilet, bolts snug. Water on. One flush. It clears and goes quiet.' },
+                  { t: { david: 'One flush. Was the old one really that bad? Or had we all just got used to it?',
+                         elena: 'One flush, and a seat I can stand up from. I had stopped noticing the cost.' } }
                 ]
               },
               manual: {
                 label: 'Manual', stages: ['Install & Live With It'],
                 steps: [
-                  { n: 'Care instructions in four languages. A QR code to register the product.' },
+                  { n: 'Steps in three languages. One line: "Record your model number."' },
                   { t: { david: 'Nothing about whether it is easier for her to stand up from.',
-                         elena: 'It wants my email before it tells me anything.' } }
+                         elena: 'Two pages on installing it. None on living with it.' } }
                 ]
               }
             },
             needs: ['box', 'valve', 'toilet'],
             exit: 'door',
-            notYet: 'The old toilet is still leaking. Start with the box.',
+            notYet: 'The old toilet is still in. Start with the box.',
             leave: []
           }
         ],
 
         /* Three lines: what it took, how it sits with them, and what the purchase left them wondering. */
         ending: function (s) {
-          var waited = s.pick === 'kohlercom';
+          var waited = !!s.flags.waited, curb = s.pick === 'kohlercom';
           if (s.personaId === 'david') {
             return [
-              waited ? 'It works. It took two weeks, a box at the curb and one more trip for a wax ring.'
-                     : 'It works. It took a weekend, a second guess and two trips to the store.',
-              'Mom has not said a word about it. From her, that means it is fine.',
-              { kohlercom: 'I got the one I wanted. She mopped that floor for two more weeks so I could.',
+              curb ? 'It flushes once. It took two weeks, a curbside box and a trip for a seat and a wax ring.'
+                   : 'It flushes once. It took a weekend, a second guess and two trips to the store.',
+              waited ? 'Mom lived with it three more weeks because I put it off. She never said a word.'
+                     : 'Mom has not said a word about it. From her, that means it is fine.',
+              { kohlercom: 'I got the one I wanted. I am still not sure the old one needed replacing.',
                 shelf: 'I still do not know if the Arc is the Highline. Nobody could tell me.',
                 other: 'I bought the one that was there. I will never know if the other was better for her.' }[s.pick]
             ];
           }
           return [
-            waited ? 'It holds. It cost me two more weeks around a puddle and a box left at the curb.'
-                   : 'It holds. It cost me a weekend and a second trip for a part nobody mentioned.',
-            'I track my sleep, my strength and my bloodwork. I chose this on a guess.',
+            curb ? 'One flush. It cost me two more weeks of two flushes, and a box left at the curb.'
+                 : 'One flush. It cost me a weekend and a second trip for a part nobody mentioned.',
+            waited ? 'I measure everything. I still put this off for three weeks, because it technically worked.'
+                   : 'I track my sleep, my strength and my bloodwork. I chose this on a guess.',
             { kohlercom: 'I paid the most and waited the longest for the one I trusted. Nothing on the way made that easy.',
               shelf: 'The same name, a different number, $150 less. I still cannot tell you what I bought.',
               other: 'I bought what was in stock. That is not how I decide anything else.' }[s.pick]
@@ -629,7 +681,7 @@
                   { choice: {
                     prompt: 'How do you fill this room?',
                     options: [
-                      { label: 'The Kohler suite. Special order, about three weeks.', set: { pick: 'suite' },
+                      { label: 'One Kohler collection. Special order, about three weeks.', set: { pick: 'suite' },
                         then: [
                           { n: 'Ordered at the desk. Three line items, three delivery estimates.' },
                           { t: { maya: 'It is the room I pictured. I hope it is the room I get.',
@@ -720,7 +772,8 @@
           if (s.personaId === 'maya') {
             return [
               'The room is beautiful. I take my ten minutes in here every night.',
-              'It also took eleven weeks, three calendars and a hundred small decisions.',
+              s.flags.waited ? 'It took one more year of "someday", then eleven weeks, three calendars and a hundred small decisions.'
+                             : 'It also took eleven weeks, three calendars and a hundred small decisions.',
               { suite: 'I got the room I pictured. I had to carry it there myself, piece by piece.',
                 mix: 'Up close, it is four purchases that mostly agree. I notice. I try not to.',
                 pro: 'Some of it is his "or equivalent". It is lovely. It is not quite what I pinned.' }[s.pick]
@@ -728,7 +781,8 @@
           }
           return [
             'The room works. The floor is dry and the light is honest.',
-            'It took eleven weeks, and I ran the project myself.',
+            s.flags.waited ? 'I waited one more year. Then it took eleven weeks, and I ran the project myself.'
+                           : 'It took eleven weeks, and I ran the project myself.',
             { suite: 'I chose one maker so it would last. Nobody showed me how the pieces fit until they were in my hall.',
               mix: 'I chose what was available. I cannot tell you it will serve me at eighty.',
               pro: 'I let him choose. I measure everything, and I cannot tell you what I bought.' }[s.pick]

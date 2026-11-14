@@ -7,6 +7,7 @@
      node web/test/run-playtest.js --root <dir>    test a copy of the game in another folder (it must contain test/)
      node web/test/run-playtest.js --only breaks:david:shelf    play one path
      node web/test/run-playtest.js --smoke         open index.html itself, press real keys from the title into a level
+     node web/test/run-playtest.js --art drawn     play with the code-drawn art (the fallback when the pictures are missing)
      node web/test/run-playtest.js --jobs 4        play several paths at once, each in its own window
 
    Set CHROME=/path/to/chrome if the browser is not found. */
@@ -23,6 +24,7 @@ const ROOT = path.resolve(opt('--root') || path.join(__dirname, '..'));
 const SHOTS = opt('--shots') ? path.resolve(opt('--shots')) : null;
 const ONLY = opt('--only');
 const SMOKE = args.includes('--smoke');
+const ART = opt('--art');            // '--art drawn' plays with the code-drawn art instead of the image sprites
 const JOBS = Math.max(1, +(opt('--jobs') || 1));
 const PAGE = pathToFileURL(path.join(ROOT, 'test', 'playtest.html')).href;
 
@@ -93,7 +95,7 @@ async function runOne(browser, query, shotFile) {
   });
   await S('Runtime.enable'); await S('Log.enable'); await S('Page.enable');
   await S('Emulation.setDeviceMetricsOverride', { width: 768, height: 448, deviceScaleFactor: 1, mobile: false });
-  await S('Page.navigate', { url: PAGE + '?' + query });
+  await S('Page.navigate', { url: PAGE + '?' + query + (ART ? '&art=' + ART : '') });
   let result = null;
   const started = Date.now();
   while (Date.now() - started < 150000) {
@@ -143,11 +145,12 @@ async function smoke(browser) {
   };
   await S('Runtime.enable'); await S('Log.enable'); await S('Page.enable');
   await S('Emulation.setDeviceMetricsOverride', { width: 1280, height: 720, deviceScaleFactor: 1, mobile: false });
-  await S('Page.navigate', { url: pathToFileURL(path.join(ROOT, 'index.html')).href });
+  await S('Page.navigate', { url: pathToFileURL(path.join(ROOT, 'index.html')).href + (ART ? '?art=' + ART : '') });
   await sleep(1500);
   const check = (name, ok) => { steps.push((ok ? 'ok   ' : 'FAIL ') + name); if (!ok) errors.push(name); };
   check('title screen shows the title', /Kohler/.test(await look('(document.querySelector(".menu.title h1") || {}).textContent || ""')));
-  check('title image loaded', (await look('(document.querySelector(".menu.title img.bg") || {}).naturalWidth || 0')) > 0);
+  check('the title picture is a scene drawn by the game', (await look('(document.querySelector(".menu.title canvas.bg") || {}).width || 0')) === 768);
+  check('the picture files loaded from the folder' + (ART === 'drawn' ? ' (not used: drawn art asked for)' : ''), (await look('window.SPRITES ? SPRITES.mode : ""')) === (ART === 'drawn' ? 'drawn' : 'sprites'));
   check('the stage is scaled to fit the window', /scale\(1\.6/.test(await look('document.getElementById("stage").style.transform')));
   await press('Enter', 'Enter', 13);
   check('Enter opens the level menu with two cards', (await look('document.querySelectorAll(".menu.pick .pcard.level").length')) === 2);
@@ -188,6 +191,9 @@ const SHOT_LIST = [
   ['06-bathroom-start', 'level=breaks&persona=david&stop=play:0'],
   ['07-narration', 'level=breaks&persona=david&stop=say:0:toolbox'],
   ['07b-thought', 'level=breaks&persona=david&stop=say:0:toolbox&nth=2'],
+  ['07c-plunger', 'level=breaks&persona=elena&optional=1&stop=say:0:plunger&nth=2'],
+  ['07d-leave-choice', 'level=breaks&persona=david&stop=choice:1:door'],
+  ['07e-store-card-waited', 'level=breaks&persona=david&choose=1&stop=card:2'],
   ['08-laptop', 'level=breaks&persona=elena&stop=screen:1:laptop'],
   ['09-phone', 'level=breaks&persona=elena&stop=screen:1:phone'],
   ['10-fridge-card', 'level=breaks&persona=david&optional=1&stop=screen:1:fridge'],

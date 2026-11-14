@@ -147,6 +147,13 @@
     return String(ev.key || '').toLowerCase();
   }
 
+  /* True for a fresh press of a pause key: Esc, or P (Safari leaves full screen on Esc, so the facilitator
+     can use P on a Mac). Held keys auto-repeat; those are ignored so the menu does not flicker. */
+  function pauseKey(ev) {
+    var k = keyName(ev);
+    return !ev.repeat && (k === 'escape' || k === 'p');
+  }
+
   /* Moves the player's feet point by (dx, dy), one axis at a time, so walls can be slid along. */
   function move(pos, dx, dy, lim, rects) {
     var R = root.ROOMS, x = pos.x, y = pos.y;
@@ -280,13 +287,25 @@
     return res;
   }
 
+  /* The picture behind the title: the renovated bathroom, tidy, with the three personas facing the viewer.
+     zoom enlarges the room so that it fills the width of the screen. */
+  function titleScene(rooms) {
+    var b = rooms.rooms.bathroom.bounds, T = rooms.T, feet = 4.4 * T;
+    function at(look, tilesFromLeft) { return { look: look, x: (b.x0 + tilesFromLeft) * T, y: feet, dir: 'down', frame: 0 }; }
+    return {
+      room: 'bathroom', zoom: 24 / (b.x1 - b.x0),
+      state: { levelId: 'title', personaId: null, actIdx: -1, variant: 'new', done: {}, flags: {}, pick: null },
+      actors: [at('david', 2.2), at('maya', 6.5), at('elena', 8.55)]
+    };
+  }
+
   root.GAME = {
     logic: {
       CPS: CPS, WPS: WPS, WALK: WALK,
       text: text, newState: newState, applySet: applySet, list: list, thingsOf: thingsOf, unlocked: unlocked, exitOpen: exitOpen,
-      createWaits: createWaits, keyName: keyName,
+      createWaits: createWaits, keyName: keyName, pauseKey: pauseKey,
       createRunner: createRunner, move: move, countWords: countWords, beatSeconds: beatSeconds,
-      screenLines: screenLines, simulate: simulate
+      screenLines: screenLines, simulate: simulate, titleScene: titleScene
     }
   };
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -372,7 +391,8 @@
     items.forEach(function (e, i) {
       e.tabIndex = -1;                                   // keys are handled here, not by browser focus
       e.onmousedown = function (ev) { ev.preventDefault(); };
-      e.onmouseenter = function () { if (sel && sel.items === items) mark(i); };
+      // mousemove, not mouseenter: a cursor resting where a menu opens must not pre-select an option
+      e.onmousemove = function () { if (sel && sel.items === items && sel.index !== i) mark(i); };
       e.onclick = function (ev) { ev.stopPropagation(); if (sel && sel.items === items) { mark(i); if (clock >= sel.armAt) sel.onPick(i); } };
     });
     mark(start || 0);
@@ -392,7 +412,12 @@
   /* ---------- input ---------- */
   function onKeyDown(ev) {
     var k = L.keyName(ev);
-    if (k === 'escape') { ev.preventDefault(); onEscape(); return; }
+    var inRoom = paused || mode === 'card' || mode === 'play' || mode === 'talk' || mode === 'ending';
+    if (k === 'escape' || (k === 'p' && inRoom)) {   // P only pauses in a level; in menus it does nothing
+      ev.preventDefault();
+      if (L.pauseKey(ev)) onEscape();
+      return;
+    }
     // no page scrolling, and Tab must not move focus out of the game
     if (k === ' ' || k === 'tab' || k.indexOf('arrow') === 0) ev.preventDefault();
     if (sel) { if (!ev.repeat) selKey(k); return; }
@@ -440,15 +465,26 @@
   function goTitle() {
     cancelAll(); mode = 'title'; state = null; level = null; act = null;
     clear(el.menu); el.menu.className = 'menu title'; show(el.menu, true);
-    var img = h('img', 'bg', el.menu);
-    img.alt = '';
-    img.onerror = function () { img.remove(); };   // the game works without the image
-    img.src = 'assets/title.png';
+    el.titleView = h('canvas', 'bg', el.menu);     // the title picture is a scene from the game
+    paintTitle();
     var box = h('div', 'titlebox', el.menu);
     h('h1', '', box, STORY.title || '');
     h('p', 'sub', box, STORY.subtitle || '');
     var go = h('button', 'opt go', box, ui('start'));
+    if (STORY.ui && STORY.ui.credits) h('p', 'credits', el.menu, STORY.ui.credits);   // the art licence asks for credit
     setSel([go], function () { goLevels(0); }, null, 0, 0.3);
+  }
+
+  /* Draws the title scene, enlarged. Called again when the pictures have loaded. */
+  function paintTitle() {
+    var cv = el.titleView;
+    if (!cv || mode !== 'title') return;
+    var SP = root.SPRITES, sc = (SP && SP.SCALE) || 1, sceneT = L.titleScene(R), k = sc * sceneT.zoom;
+    cv.width = A.W * sc; cv.height = A.H * sc;
+    var c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.setTransform(k, 0, 0, k, -R.rooms[sceneT.room].bounds.x0 * R.T * k, 0);
+    R.render(c, sceneT.room, sceneT.state, 0, { actors: sceneT.actors });
   }
 
   function goLevels(startIdx) {
@@ -660,6 +696,7 @@
 
   async function playSteps(steps) {
     mode = 'talk'; keys = {}; setHint('');
+    player.frame = 0;                         // stand still while reading, not frozen mid-stride
     var run = L.createRunner(steps, state), b;
     while ((b = run.next())) {
       try {
@@ -727,7 +764,7 @@
   function draw() {
     R.render(ctx, act.room, state, clock, {
       info: storeInfo(), markers: mode === 'play' ? markers() : [],
-      actors: [{ x: player.x, y: player.y, look: persona.look || persona.id, dir: player.dir, frame: player.frame }]
+      actors: [{ x: player.x, y: player.y, look: persona.look || persona.id, dir: player.dir, frame: player.frame, walk: player.walk }]
     });
   }
 
@@ -762,8 +799,14 @@
     el.stage = document.getElementById('stage');
     if (!el.stage) return;
     el.view = h('canvas', 'view', el.stage);
-    el.view.width = A.W; el.view.height = A.H;
+    /* The canvas is finer than the game's own 384x224 coordinates, so image sprites keep their detail.
+       Everything is still drawn in game pixels; the transform does the scaling. */
+    var SP = root.SPRITES, sc = (SP && SP.SCALE) || 1;
+    el.view.width = A.W * sc; el.view.height = A.H * sc;
     ctx = el.view.getContext('2d');
+    ctx.setTransform(sc, 0, 0, sc, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    if (SP) SP.load('', function () { paintTitle(); });   // falls back to the drawn art if any picture is missing
     el.chip = h('div', 'chip', el.stage);
     el.hint = h('div', 'hint', el.stage);
     el.dialog = h('div', 'dialog', el.stage);

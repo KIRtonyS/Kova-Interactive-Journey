@@ -12,6 +12,11 @@
      reach    how close the player must be, in px (default 16)
      show(s)  hide the item per level, persona or progress
      variant  a string, or a function of state
+     front    true if the object can only be used from its front (its lower edge), not from the aisle behind it
+     painted  true if the object is part of the room's painted picture (or a function of the variant)
+     drawn    [w, h] in tiles: the size of the code-drawn stand-in for a painted object, used when pictures are missing
+   Room fields: bounds, spawn, items. Optional: floor (the tile row where the floor starts, default 3) and
+   background(state) (which version of the room picture to show).
    Loaded after props.js. Sets window.ROOMS. */
 (function (root) {
   'use strict';
@@ -19,22 +24,31 @@
   var PLAYER = { w: 8, h: 4 }; // the player's feet box in px
 
   function L(id) { return function (s) { return s.levelId === id; }; }
+  /* Sign words come from story.js (STORY.signs). */
+  function word(key, fallback) { var sg = root.STORY && root.STORY.signs; return (sg && sg[key]) || fallback; }
   function at(id, act) { return function (s) { return s.levelId === id && s.actIdx === act; }; }
   function who(p) { return function (s) { return s.personaId === p; }; }
   var NPC_FOOT = [0.1, 1.05, 0.7, 0.35];
 
+  /* Room sizes in tiles: width x height, with the three wall rows included. One scale for all three places, so a
+     bathroom is small, a living room is larger and a store fills the screen (24 x 14). Rooms sit at the top of
+     the screen, centred left to right. */
+  var SIZE = { bathroom: [12, 9], home: [16, 11], store: [24, 14] };
+  function sized(roomId) { var s = SIZE[roomId], x0 = (24 - s[0]) / 2; return { x0: x0, x1: x0 + s[0], y1: s[1] }; }
+
   var rooms = {
-    /* ---------------- Bathroom (old and new) ---------------- */
+    /* ---------------- Bathroom (dated and renovated): 12 x 9 tiles, from x = 6 to x = 18 ---------------- */
     bathroom: {
-      bounds: { x0: 3, x1: 21, y1: 12 },
-      spawn: { x: 4.2, y: 4.7 },     // just inside the door but out of its reach, so the walking hint shows first
+      bounds: sized('bathroom'),
+      spawn: { x: 6.8, y: 4.7 },
       items: [
-        { id: 'door', kind: 'door', x: 3.4, y: 0.5, w: 1.6, h: 2.5, layer: 'wall' },
-        { id: 'vanity', kind: 'vanity', x: 5.6, y: 0.6, w: 3, h: 3.2, solid: true, foot: [0, 2.4, 3, 0.8],
+        { id: 'door', kind: 'door', x: 6.2, y: 0.5, w: 1.2, h: 2.5, layer: 'wall' },
+        { id: 'rack', kind: 'rack', x: 7.5, y: 1.0, w: 1.4, h: 1.6, layer: 'wall',
           variant: function (s) { return s.variant === 'new' ? 'new' : 'old'; } },
-        { id: 'tile', kind: 'tilewall', x: 9.1, y: 0.6, w: 1.7, h: 2.2, layer: 'wall', show: at('project', 0) },
-        { kind: 'window', x: 10.9, y: 0.3, w: 1.9, h: 1.3, layer: 'wall' },
-        { id: 'toilet', kind: 'toilet', x: 11.1, y: 1.9, w: 1.3, h: 1.75, solid: true, foot: [0.1, 1.15, 1.1, 0.6],
+        { id: 'vanity', kind: 'vanity', x: 9, y: 0.2, w: 3, h: 3.6, solid: true, foot: [0, 2.8, 3, 0.8],
+          variant: function (s) { return s.variant === 'new' ? 'new' : 'old'; } },
+        { id: 'plunger', kind: 'plunger', x: 12.1, y: 2.5, w: 0.8, h: 1.3, show: at('breaks', 0) },
+        { id: 'toilet', kind: 'toilet', x: 13.0, y: 2.0, w: 1.1, h: 1.7, solid: true, foot: [0.05, 1.0, 1.0, 0.7],
           variant: function (s) {
             if (s.variant === 'new') return 'new';
             if (s.levelId === 'breaks' && s.actIdx === 3) {
@@ -43,83 +57,95 @@
             }
             return 'old';
           } },
-        { id: 'valve', kind: 'valve', x: 12.5, y: 2.1, w: 0.75, h: 0.8, layer: 'wall', show: L('breaks') },
-        { id: 'puddle', kind: 'puddle', x: 8.6, y: 3.5, w: 2.6, h: 1.4, layer: 'floor', show: at('breaks', 0) },
-        { id: 'rack', kind: 'rack', x: 13.5, y: 1.1, w: 1.4, h: 1.6, layer: 'wall',
+        { id: 'valve', kind: 'valve', x: 14.2, y: 2.1, w: 0.75, h: 0.8, layer: 'wall', show: L('breaks') },
+        { id: 'tile', kind: 'tilewall', x: 14.15, y: 0.6, w: 0.85, h: 2.3, layer: 'wall', show: at('project', 0) },
+        { id: 'controls', kind: 'controls', x: 14.1, y: 1.0, w: 0.9, h: 1.7, layer: 'wall', show: at('project', 3) },
+        { id: 'tub', kind: 'tub', x: 15, y: 1.6, w: 3, h: 2.6, solid: true, foot: [0, 1.2, 3, 1.4],
           variant: function (s) { return s.variant === 'new' ? 'new' : 'old'; } },
-        { id: 'controls', kind: 'controls', x: 14.95, y: 1.2, w: 1.3, h: 1.5, layer: 'wall', show: at('project', 3) },
-        { id: 'tub', kind: 'tub', x: 16.3, y: 1.6, w: 4.5, h: 2.6, solid: true, foot: [0, 1.4, 4.5, 1.2],
+        { kind: 'mat', x: 15.2, y: 4.4, w: 2.6, h: 0.9, layer: 'floor',
           variant: function (s) { return s.variant === 'new' ? 'new' : 'old'; } },
-        { kind: 'mat', x: 17, y: 4.5, w: 2.6, h: 0.9, layer: 'floor',
-          variant: function (s) { return s.variant === 'new' ? 'new' : 'old'; } },
-        { id: 'toolbox', kind: 'toolbox', x: 13.4, y: 4.7, w: 1.1, h: 0.8, solid: true, show: at('breaks', 0) },
-        { id: 'box', kind: 'boxes', x: 7.2, y: 6.6, w: 1.8, h: 1.8, solid: true, foot: [0, 0.6, 1.8, 1.2], variant: 'single', show: at('breaks', 3) },
-        { id: 'manual', kind: 'manual', x: 9.6, y: 7.5, w: 0.8, h: 0.8, layer: 'floor', show: at('breaks', 3) },
-        { id: 'box', kind: 'boxes', x: 6.8, y: 6.3, w: 2.8, h: 2.2, solid: true, foot: [0, 0.8, 2.8, 1.4], variant: 'stack', show: at('project', 3) },
-        { id: 'phone', kind: 'stool', x: 13.7, y: 4.5, w: 0.9, h: 1.1, solid: true, foot: [0, 0.5, 0.9, 0.6], show: at('project', 3) },
-        { kind: 'plant', x: 19.7, y: 9.8, w: 1, h: 1.6, solid: true, foot: [0.1, 1.1, 0.8, 0.5] },
-        { kind: 'basket', x: 3.4, y: 10, w: 1, h: 1.2, solid: true, foot: [0, 0.5, 1, 0.7] }
+        { id: 'toolbox', kind: 'toolbox', x: 12.4, y: 5.2, w: 1.1, h: 0.8, solid: true, show: at('breaks', 0) },
+        { id: 'box', kind: 'boxes', x: 8.5, y: 5.6, w: 1.8, h: 1.7, solid: true, foot: [0, 0.6, 1.8, 1.1], variant: 'single', show: at('breaks', 3) },
+        { id: 'manual', kind: 'manual', x: 11.0, y: 6.6, w: 0.8, h: 0.8, layer: 'floor', show: at('breaks', 3) },
+        { id: 'box', kind: 'boxes', x: 7.6, y: 5.2, w: 2.8, h: 2.1, solid: true, foot: [0, 0.8, 2.8, 1.3], variant: 'stack', show: at('project', 3) },
+        { id: 'phone', kind: 'stool', x: 12.5, y: 5.0, w: 0.9, h: 1.3, solid: true, foot: [0, 0.6, 0.9, 0.7], show: at('project', 3) },
+        { kind: 'plant', x: 16.9, y: 7.0, w: 1, h: 1.6, solid: true, foot: [0.1, 1.1, 0.8, 0.5] }
       ]
     },
 
-    /* ---------------- Home (living room) ---------------- */
+    /* ---------------- Home (living room): 16 x 11 tiles, from x = 4 to x = 20 ---------------- */
     home: {
-      bounds: { x0: 0, x1: 24, y1: 14 },
-      spawn: { x: 1.8, y: 4.7 },
+      bounds: sized('home'),
+      spawn: { x: 4.9, y: 4.7 },
       items: [
-        { id: 'door', kind: 'door', x: 1, y: 0.5, w: 1.6, h: 2.5, layer: 'wall' },
-        { kind: 'window', x: 3.6, y: 0.5, w: 2.6, h: 1.6, layer: 'wall' },
-        { kind: 'bookshelf', x: 7.2, y: 0.4, w: 2, h: 2.9, solid: true, foot: [0, 2.6, 2, 0.3] },
-        { kind: 'calendar', x: 10, y: 0.9, w: 0.9, h: 1.1, layer: 'wall' },
-        { id: 'moodboard', kind: 'moodboard', x: 11.6, y: 0.6, w: 2.5, h: 2.2, layer: 'wall',
+        { id: 'door', kind: 'door', x: 4.2, y: 0.5, w: 1.4, h: 2.5, layer: 'wall' },
+        { kind: 'window', x: 5.9, y: 0.5, w: 2.3, h: 1.6, layer: 'wall' },
+        { kind: 'bookshelf', x: 8.4, y: 0.4, w: 2, h: 2.9, solid: true, foot: [0, 2.6, 2, 0.3] },
+        { kind: 'calendar', x: 10.7, y: 0.9, w: 0.9, h: 1.1, layer: 'wall' },
+        { id: 'moodboard', kind: 'moodboard', x: 11.9, y: 0.6, w: 2.5, h: 2.2, layer: 'wall',
           variant: function (s) { return s.levelId === 'project' ? 'board' : 'frame'; } },
-        { id: 'laptop', kind: 'desk', x: 15, y: 1.4, w: 3, h: 2.4, solid: true, foot: [0, 1.6, 3, 0.8] },
-        { kind: 'chair', x: 18.3, y: 3.3, w: 0.9, h: 1.3, solid: true, foot: [0, 0.5, 0.9, 0.8] },
-        { id: 'fridge', kind: 'fridge', x: 20.2, y: 0.2, w: 3.5, h: 3.5, solid: true, foot: [0, 2.8, 3.5, 0.7],
+        { id: 'laptop', kind: 'desk', x: 14.7, y: 1.9, w: 2, h: 1.9, solid: true, foot: [0, 1.1, 2, 0.8] },
+        { kind: 'chair', x: 16.9, y: 3.2, w: 0.9, h: 1.4, solid: true, foot: [0, 0.6, 0.9, 0.8] },
+        { id: 'fridge', kind: 'fridge', x: 18.4, y: 0.7, w: 1.4, h: 2.9, solid: true, foot: [0, 2.2, 1.4, 0.7],
           variant: function (s) { return s.levelId === 'breaks' ? 'card' : 'plain'; } },
-        { id: 'notebook', kind: 'notebook', x: 21.0, y: 1.2, w: 0.8, h: 0.8, sortY: 3.75, reach: 40, show: L('project') },
-        { kind: 'lamp', x: 3.0, y: 5.9, w: 0.8, h: 2.3, solid: true, foot: [0.1, 1.9, 0.6, 0.4] },
-        { kind: 'sofa', x: 4, y: 6.6, w: 4, h: 2.3, solid: true, foot: [0, 0.4, 4, 1.9] },
-        { id: 'tablet', kind: 'tablet', x: 6.3, y: 7.4, w: 0.8, h: 0.8, sortY: 8.95, reach: 22, show: L('breaks') },
-        { kind: 'rug', x: 3.4, y: 9.4, w: 6.4, h: 3, layer: 'floor' },
-        { kind: 'table', x: 5, y: 10, w: 2.6, h: 1.3, solid: true, foot: [0, 0.2, 2.6, 1.0] },
-        { id: 'phone', kind: 'phone', x: 5.9, y: 9.85, w: 0.8, h: 0.8, sortY: 11.35, reach: 20 },
+        { kind: 'lamp', x: 4.3, y: 5.3, w: 1, h: 1.9, solid: true, foot: [0.1, 1.2, 0.8, 0.6] },
+        { kind: 'sofa', x: 6, y: 6.2, w: 4, h: 1.5, solid: true, foot: [0, 0.3, 4, 1.2] },
+        { id: 'tablet', kind: 'tablet', x: 6.5, y: 6.4, w: 0.8, h: 0.8, sortY: 7.75, reach: 22, show: L('breaks') },
+        { id: 'notebook', kind: 'notebook', x: 6.5, y: 6.4, w: 0.8, h: 0.8, sortY: 7.75, reach: 22, show: L('project') },
+        { kind: 'rug', x: 5.2, y: 7.95, w: 6.5, h: 3, layer: 'floor' },
+        { kind: 'table', x: 7.2, y: 8.9, w: 2.6, h: 1.25, solid: true, foot: [0, 0.2, 2.6, 0.9] },
+        { id: 'phone', kind: 'phone', x: 8.9, y: 8.4, w: 0.8, h: 0.8, sortY: 10.2, reach: 20 },
         // persona dressing
-        { kind: 'crutch', x: 8.1, y: 6.9, w: 0.5, h: 1.9, show: who('david') },
-        { id: 'mother', kind: 'npc', look: 'mother', x: 10.4, y: 5.2, w: 0.9, h: 1.4, solid: true, foot: NPC_FOOT, show: who('david') },
-        { kind: 'toys', x: 7.9, y: 10.6, w: 1.8, h: 1.1, layer: 'floor', show: who('maya') },
-        { id: 'partner', kind: 'npc', look: 'partner', x: 10.4, y: 5.2, w: 0.9, h: 1.4, solid: true, foot: NPC_FOOT, show: who('maya') },
-        { kind: 'trainmat', x: 13.2, y: 9.4, w: 4, h: 1.7, layer: 'floor', show: who('elena') },
-        { id: 'training', kind: 'training', x: 17.5, y: 8.4, w: 2.2, h: 2, solid: true, foot: [0, 0.9, 2.2, 1.1], show: who('elena') },
-        { kind: 'plant', x: 22.6, y: 11.3, w: 1, h: 1.6, solid: true, foot: [0.1, 1.1, 0.8, 0.5] }
+        { kind: 'crutch', x: 10.2, y: 6.2, w: 0.5, h: 1.5, show: who('david') },
+        { id: 'mother', kind: 'npc', look: 'mother', x: 12.4, y: 4.6, w: 0.9, h: 1.4, solid: true, foot: NPC_FOOT, show: who('david') },
+        { kind: 'toys', x: 12.4, y: 9.4, w: 1.4, h: 0.8, layer: 'floor', show: who('maya') },
+        { id: 'partner', kind: 'npc', look: 'partner', x: 12.4, y: 4.6, w: 0.9, h: 1.4, solid: true, foot: NPC_FOOT, show: who('maya') },
+        { kind: 'trainmat', x: 12.6, y: 8.6, w: 4, h: 1.7, layer: 'floor', show: who('elena') },
+        { id: 'training', kind: 'training', x: 17.4, y: 6.4, w: 1.9, h: 1.8, solid: true, foot: [0, 0.9, 1.9, 0.9], show: who('elena') },
+        { kind: 'plant', x: 18.8, y: 9.2, w: 1, h: 1.6, solid: true, foot: [0.1, 1.1, 0.8, 0.5] }
       ]
     },
 
-    /* ---------------- Store (Home Depot in Level 1, Lowe's in Level 2) ---------------- */
+    /* ---------------- Store (Home Depot in Level 1, Lowe's in Level 2): 24 x 14 tiles ----------------
+       Three rows of shelving make the aisles: one along the back wall, two across the floor. Gaps in the rows
+       are the cross aisles. The player comes in by the doors at the top right. */
     store: {
-      bounds: { x0: 0, x1: 24, y1: 14 },
+      bounds: sized('store'),
+      background: function (s) { return s.levelId === 'breaks' ? 'hd' : 'lowes'; },   // which store's colours
       spawn: { x: 21.9, y: 4.8 },
       items: [
+        // along the back wall
         { kind: 'banner', x: 7.6, y: 0.45, w: 6, h: 1, layer: 'wall' },
-        { kind: 'aislesign', x: 4.5, y: 0.55, w: 2.2, h: 0.6, layer: 'wall',
-          variant: function (s) { return s.levelId === 'breaks' ? 'AISLE 25' : 'BATH'; } },
+        { kind: 'aislesign', x: 2.2, y: 0.55, w: 2.6, h: 0.6, layer: 'wall',
+          variant: function (s) { return s.levelId === 'breaks' ? word('aisle', 'AISLE 25') : word('bath', 'BATH'); } },
         { id: 'door', kind: 'exitdoors', x: 20.6, y: 0.5, w: 2.6, h: 2.5, layer: 'wall' },
-        { kind: 'shelves', x: 0.4, y: 1.2, w: 6.6, h: 2.6, solid: true, foot: [0, 1.8, 6.6, 0.8] },
+        { kind: 'shelves', x: 0.5, y: 1.2, w: 6, h: 2.6, solid: true, foot: [0, 1.8, 6, 0.8] },
         { id: 'display', kind: 'display', x: 7.6, y: 1.55, w: 6, h: 2.6, solid: true, foot: [0, 1.5, 6, 1.1],
           variant: function (s) { return s.levelId === 'breaks' ? 'toilets' : 'bath'; } },
         { id: 'kohler', kind: 'endcap', x: 14.6, y: 1.2, w: 3, h: 3, solid: true, foot: [0, 2, 3, 1],
           variant: function (s) { return s.levelId === 'breaks' ? 'toilet' : 'bath'; } },
-        { kind: 'shelves', x: 18.3, y: 1.2, w: 1.9, h: 2.6, solid: true, foot: [0, 1.8, 1.9, 0.8] },
-        { id: 'shelf', kind: 'shelf3', x: 3.2, y: 6.2, w: 4.6, h: 2.2, solid: true, foot: [0, 1.3, 4.6, 0.9], show: L('breaks') },
-        { id: 'board', kind: 'board', x: 3.2, y: 6.2, w: 4.6, h: 2.2, solid: true, foot: [0, 1.6, 4.6, 0.6], show: L('project') },
-        { id: 'associate', kind: 'npc', look: 'associate', x: 11.5, y: 5.6, w: 0.9, h: 1.4, solid: true, foot: NPC_FOOT },
-        { id: 'shopper', kind: 'npc', look: 'shopper', x: 17.2, y: 7.6, w: 0.9, h: 1.4, solid: true, foot: NPC_FOOT, show: L('breaks') },
-        { kind: 'cart', x: 18.4, y: 8, w: 1.5, h: 1.2, solid: true, foot: [0, 0.4, 1.5, 0.8], show: L('breaks') },
-        { kind: 'shelves', x: 13.5, y: 10.6, w: 5.5, h: 2.6, solid: true, foot: [0, 0.8, 5.5, 1.8], show: L('breaks') },
-        { id: 'contractor', kind: 'npc', look: 'contractor', x: 15.8, y: 8.5, w: 0.9, h: 1.4, solid: true, foot: NPC_FOOT, show: L('project') },
-        { kind: 'prodesk', x: 13.5, y: 10.6, w: 5.5, h: 1.9, solid: true, show: L('project') },
-        { kind: 'cart', x: 9.2, y: 10.2, w: 1.5, h: 1.2, solid: true, foot: [0, 0.4, 1.5, 0.8], show: L('project') },
-        { kind: 'shelves', x: 0.4, y: 10.6, w: 6, h: 2.6, solid: true, foot: [0, 0.8, 6, 1.8] }
+        { kind: 'shelves', x: 18.2, y: 1.2, w: 2, h: 2.6, solid: true, foot: [0, 1.8, 2, 0.8] },
+        { id: 'associate', kind: 'npc', look: 'associate', x: 13.7, y: 4.1, w: 0.9, h: 1.4, solid: true, foot: NPC_FOOT },
+        // second row: shelving, with the choice in the middle
+        { kind: 'shelves', x: 0.5, y: 5.6, w: 6, h: 2.6, solid: true, foot: [0, 1.0, 6, 1.6] },
+        { kind: 'aislesign', x: 2.2, y: 4.9, w: 2.6, h: 0.6, sortY: 8.25,
+          variant: function (s) { return s.levelId === 'breaks' ? word('aisleBefore', 'AISLE 24') : word('plumbing', 'PLUMBING'); } },
+        { id: 'shelf', kind: 'shelf3', x: 8.4, y: 6.0, w: 4.6, h: 2.2, solid: true, foot: [0, 0.9, 4.6, 1.3], front: true, show: L('breaks') },
+        { id: 'board', kind: 'board', x: 8.4, y: 6.0, w: 4.6, h: 2.2, solid: true, foot: [0, 0.9, 4.6, 1.3], front: true, show: L('project') },
+        { kind: 'shelves', x: 14.8, y: 5.6, w: 6, h: 2.6, solid: true, foot: [0, 1.0, 6, 1.6] },
+        { id: 'shopper', kind: 'npc', look: 'shopper', x: 16.6, y: 8.3, w: 0.9, h: 1.4, solid: true, foot: NPC_FOOT, show: L('breaks') },
+        { kind: 'cart', x: 17.8, y: 8.6, w: 1.5, h: 1.2, solid: true, foot: [0, 0.4, 1.5, 0.8], show: L('breaks') },
+        { id: 'contractor', kind: 'npc', look: 'contractor', x: 16.6, y: 8.3, w: 0.9, h: 1.4, solid: true, foot: NPC_FOOT, show: L('project') },
+        { kind: 'flatbed', x: 17.8, y: 8.5, w: 2.5, h: 1.4, solid: true, foot: [0, 0.6, 2.5, 0.8], show: L('project') },
+        // third row: more shelving, a pallet, the pro desk (Lowe's) and a till near the way out
+        { kind: 'shelves', x: 0.5, y: 9.6, w: 6, h: 2.6, solid: true, foot: [0, 1.0, 6, 1.6] },
+        { kind: 'aislesign', x: 2.2, y: 8.9, w: 2.6, h: 0.6, sortY: 12.25,
+          variant: function (s) { return s.levelId === 'breaks' ? word('aisleAfter', 'AISLE 26') : word('tile', 'TILE'); } },
+        { kind: 'pallet', x: 7.2, y: 10.3, w: 2, h: 1.9, solid: true, foot: [0, 0.7, 2, 1.2] },
+        { kind: 'shelves', x: 10, y: 9.6, w: 6, h: 2.6, solid: true, foot: [0, 1.0, 6, 1.6], show: L('breaks') },
+        { kind: 'prodesk', x: 10, y: 10.3, w: 5.5, h: 1.9, solid: true, show: L('project') },
+        { kind: 'checkout', x: 19.6, y: 9.9, w: 3, h: 2, solid: true, foot: [0, 0.7, 3, 1.3] },
+        { kind: 'pallet', x: 21.6, y: 6.2, w: 2, h: 1.9, solid: true, foot: [0, 0.7, 2, 1.2], show: L('project') }
       ]
     }
   };
@@ -134,7 +160,11 @@
   }
 
   /* The rectangle the player must be near to use the item. */
-  function hit(it) { return foot(it) || box(it); }
+  function hit(it) {
+    var f = foot(it);
+    if (f && it.front) return { x: f.x, y: f.y + f.h - 2, w: f.w, h: 2 };     // only its front edge counts
+    return f || box(it);
+  }
 
   function anchor(it) {
     var h = hit(it);
@@ -161,10 +191,13 @@
 
   function variantOf(it, s) { return typeof it.variant === 'function' ? it.variant(s) : it.variant; }
 
+  /* Where the floor starts, in px. */
+  function floorTop(roomId) { var f = rooms[roomId].floor; return f != null ? f * T : WALL_H; }
+
   /* Where the player's feet point (centre x, bottom y) may be. */
   function limits(roomId) {
     var b = rooms[roomId].bounds;
-    return { x0: b.x0 * T + PLAYER.w / 2, x1: b.x1 * T - PLAYER.w / 2, y0: WALL_H + PLAYER.h, y1: b.y1 * T - 1 };
+    return { x0: b.x0 * T + PLAYER.w / 2, x1: b.x1 * T - PLAYER.w / 2, y0: floorTop(roomId) + PLAYER.h, y1: b.y1 * T - 1 };
   }
 
   function solidRects(roomId, s) {
@@ -247,12 +280,28 @@
      opts.info    { store, accent } for store signs and colours */
   function render(ctx, roomId, s, t, opts) {
     opts = opts || {};
-    var A = root.ART, PR = root.PROPS, info = opts.info || {};
+    var A = root.ART, PR = root.PROPS, SP = root.SPRITES, info = opts.info || {};
     var items = visible(roomId, s), list = [], i;
-    A.shell(ctx, roomId, s.variant, { bounds: rooms[roomId].bounds, accent: info.accent });
+    /* Image sprites (sprites.js) are used where they exist; everything else is drawn in code. */
+    var spr = !!SP && SP.mode === 'sprites', room = rooms[roomId];
+    var version = room.background ? room.background(s) : s.variant;
+    var painted = spr && SP.background(ctx, roomId, version, s.variant, room.bounds);
+    if (!painted) A.shell(ctx, roomId, s.variant, { bounds: room.bounds, accent: info.accent, wallH: floorTop(roomId) });
+    var people = painted ? SP.people(roomId, version) : 1;      // people are drawn larger in a painted room
     function drawItem(it) {
-      var b = box(it);
-      PR.draw(ctx, it.kind, b.x, b.y, b.w, b.h, variantOf(it, s), t, { accent: info.accent, store: info.store, look: it.look });
+      var b = box(it), v = variantOf(it, s);
+      var inPicture = typeof it.painted === 'function' ? it.painted(v) : !!it.painted;
+      if (painted && inPicture) return;
+      if (it.drawn) {                               // the code-drawn stand-in sits at the bottom of the painted object's box
+        b = { x: b.x + (b.w - it.drawn[0] * T) / 2, y: b.y + b.h - it.drawn[1] * T, w: it.drawn[0] * T, h: it.drawn[1] * T };
+      }
+      if (spr && it.kind === 'npc') {
+        var look = it.look === 'associate' && info.accent === A.PAL.lowesNavy ? 'associate_lowes' : it.look;
+        if (SP.character(ctx, look, b.x + b.w / 2, b.y + b.h, 'down', 0, 0, people)) return;
+      } else if (spr && SP.prop(ctx, it.kind, v, b.x, b.y, b.w, b.h)) {
+        return;
+      }
+      PR.draw(ctx, it.kind, b.x, b.y, b.w, b.h, v, t, { accent: info.accent, store: info.store, look: it.look });
     }
     for (i = 0; i < items.length; i++) if (items[i].layer === 'wall') drawItem(items[i]);
     for (i = 0; i < items.length; i++) if (items[i].layer === 'floor') drawItem(items[i]);
@@ -261,7 +310,10 @@
       list.push({ y: sortY(it), draw: function () { drawItem(it); } });
     });
     (opts.actors || []).forEach(function (a) {
-      list.push({ y: a.y, draw: function () { A.character(ctx, a.look, Math.round(a.x) - 6, Math.round(a.y) - 21, a.dir, a.frame); } });
+      list.push({ y: a.y, draw: function () {
+        if (spr && SP.character(ctx, a.look, a.x, a.y, a.dir, a.frame, a.walk, people)) return;
+        A.character(ctx, a.look, Math.round(a.x) - 6, Math.round(a.y) - 21, a.dir, a.frame);
+      } });
     });
     list.sort(function (p, q) { return p.y - q.y; });
     for (i = 0; i < list.length; i++) list[i].draw();
@@ -273,9 +325,9 @@
 
   root.ROOMS = {
     render: render,
-    T: T, WALL_H: WALL_H, REACH: REACH, PLAYER: PLAYER, rooms: rooms,
+    T: T, WALL_H: WALL_H, REACH: REACH, PLAYER: PLAYER, rooms: rooms, SIZE: SIZE,
     box: box, foot: foot, hit: hit, anchor: anchor, dist: dist, inReach: inReach, sortY: sortY,
-    spawn: spawn, visible: visible, variantOf: variantOf, limits: limits, solidRects: solidRects,
+    spawn: spawn, floorTop: floorTop, visible: visible, variantOf: variantOf, limits: limits, solidRects: solidRects,
     blocked: blocked, blockedBy: blockedBy, nearest: nearest, path: path
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -46,3 +46,16 @@
 - Canvas 384 by 224 logical pixels (16 px tiles), stage 768 by 448 scaled to fit the window. Text and menus are HTML.
 - All words live in `story.js`. Current journey only: no future concept, no solutions, no opportunities. Text signs, no real logos.
 - Voice: Maya's text never says "accessible"; Elena says "protects my independence", never "extends my life".
+
+## Round 2 (13 Nov 2026): Level 1 becomes "Not What It Used to Be"
+
+Arnav changed the pain point journey: the fixture still works, just not as well as it used to. This overturns the build plan's locked decision that Elena slips on a leaking floor and is hurt in Level 1.
+
+| # | Decision |
+|---|---|
+| R1 | The fixture stays the toilet: a weak flush that runs on and needs a second flush or a jiggle of the handle. The rooms, the art and the real Highline / Highline Arc / Elliston facts stay. |
+| R2 | The triggers are small daily friction with no injury. David's mother has started flushing twice rather than mention it; Elena notices the weak flush and how hard the low seat is to stand up from after training. |
+| R3 | The level is renamed "Not What It Used to Be". Pitch: "It still works. Just not well. Fix it, replace it, or live with it a little longer?" |
+| R4 | The friction is doubt and putting it off. The three store choices stay. Leaving home offers "Live with it a bit longer": weeks pass, the problem stays, and the store's title card and one ending line remember it. |
+
+Also in this round: the puddle became a plunger; the plumber booking and Level 2's "wait another year" now change a line; sign words moved to `STORY.signs`; P pauses as well as Esc (Safari leaves full screen on Esc); held Esc no longer flickers the menu; a resting mouse cursor no longer pre-selects a pause option; the player stands still while reading; the exit marker no longer clips at the top of the screen.

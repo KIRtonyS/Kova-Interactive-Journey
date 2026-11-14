@@ -22,7 +22,7 @@ function plain(v) { return JSON.parse(JSON.stringify(v)); }
 /* The eight scenes of the game: which room each act uses and which objects the player must be able to use.
    Taken from the build plan's object tables. story.test.js checks story.js against the same rooms. */
 const SCENES = [
-  { name: 'L1 act1 bathroom', room: 'bathroom', variant: 'old', levelId: 'breaks', actIdx: 0, personas: ['david', 'elena'], ids: ['toilet', 'toolbox', 'puddle', 'vanity', 'door'] },
+  { name: 'L1 act1 bathroom', room: 'bathroom', variant: 'old', levelId: 'breaks', actIdx: 0, personas: ['david', 'elena'], ids: ['toilet', 'toolbox', 'plunger', 'vanity', 'door'] },
   { name: 'L1 act2 home', room: 'home', levelId: 'breaks', actIdx: 1, personas: ['david', 'elena'], ids: ['laptop', 'phone', 'fridge', 'tablet', 'door'], extra: { david: ['mother'], elena: ['training'] } },
   { name: 'L1 act3 store', room: 'store', levelId: 'breaks', actIdx: 2, personas: ['david', 'elena'], ids: ['display', 'kohler', 'associate', 'shopper', 'shelf', 'door'] },
   { name: 'L1 act4 bathroom', room: 'bathroom', variant: 'old', levelId: 'breaks', actIdx: 3, personas: ['david', 'elena'], ids: ['box', 'valve', 'toilet', 'manual', 'door'] },

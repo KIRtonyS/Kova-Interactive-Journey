@@ -96,3 +96,32 @@ test('persona dressing appears only for its persona', () => {
   const maya = ROOMS.visible('home', { levelId: 'project', personaId: 'maya', actIdx: 1, done: {}, flags: {} }).map(it => it.id || it.kind);
   assert.ok(maya.includes('partner') && maya.includes('toys') && !maya.includes('training'));
 });
+
+test('rooms have fixed sizes on one scale: bathroom 12 x 9, living room 16 x 11, store 24 x 14, each centred', () => {
+  const home = ROOMS.rooms.home.bounds, store = ROOMS.rooms.store.bounds;
+  assert.deepEqual([home.x1 - home.x0, home.y1], [16, 11]);
+  assert.deepEqual([store.x1 - store.x0, store.y1], [24, 14]);
+  const bath = ROOMS.rooms.bathroom.bounds;
+  assert.deepEqual([bath.x1 - bath.x0, bath.y1], [12, 9]);
+  assert.equal(bath.x0, 24 - bath.x1, 'the bathroom is centred');
+  for (const it of ROOMS.rooms.bathroom.items) {
+    assert.ok(it.x >= bath.x0 && it.x + it.w <= bath.x1 && it.y + it.h <= bath.y1, it.kind + ' is outside the bathroom');
+  }
+  assert.equal(home.x0, 24 - home.x1, 'the living room is centred');
+  for (const it of ROOMS.rooms.home.items) {
+    assert.ok(it.x >= home.x0 && it.x + it.w <= home.x1 && it.y + it.h <= home.y1, it.kind + ' is outside the living room');
+  }
+});
+
+test('the store has three rows of shelving, and the shelf you choose from can only be used from the front', () => {
+  const items = Array.from(ROOMS.rooms.store.items);
+  const rows = new Set(items.filter(it => it.kind === 'shelves').map(it => it.y));
+  assert.ok(rows.size >= 3, 'expected three rows of shelving, found ' + rows.size);
+  assert.ok(items.filter(it => it.kind === 'aislesign').length >= 3, 'each row has an aisle sign');
+  for (const id of ['shelf', 'board']) {
+    const it = items.find(i => i.id === id), f = ROOMS.foot(it);
+    assert.equal(it.front, true, id);
+    assert.equal(ROOMS.inReach(it, f.x + f.w / 2, f.y + f.h + 6), true, id + ' can be used from the front');
+    assert.equal(ROOMS.inReach(it, f.x + f.w / 2, f.y - 2), false, id + ' cannot be used from behind');
+  }
+});

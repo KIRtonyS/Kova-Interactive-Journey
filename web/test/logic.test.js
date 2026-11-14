@@ -186,7 +186,7 @@ function miniStory(overrides) {
           { label: 'B', set: { pick: 'other' }, then: [{ n: 'Took B, the other one.' }] }
         ] } }
       ] },
-      puddle: { label: 'Puddle', steps: [{ n: 'Soaked towels.' }] }
+      plunger: { label: 'Puddle', steps: [{ n: 'Soaked towels.' }] }
     },
     needs: ['toilet', 'toolbox'], exit: 'door', leave: [{ n: 'Leaving.' }], notYet: 'Not yet.', final: true
   }];
@@ -252,7 +252,7 @@ test('simulate: lists the text inside a screen', () => {
 
 test('simulate: opts.choose picks that option on choices that do not set the purchase', () => {
   const st = miniStory();
-  st.levels[0].acts[0].things.puddle.steps = [{ choice: { prompt: 'Mop?', options: [{ label: 'Yes', then: [{ n: 'Mopped.' }] }, { label: 'No', then: [{ n: 'Left it.' }] }] } }];
+  st.levels[0].acts[0].things.plunger.steps = [{ choice: { prompt: 'Mop?', options: [{ label: 'Yes', then: [{ n: 'Mopped.' }] }, { label: 'No', then: [{ n: 'Left it.' }] }] } }];
   const first = Array.from(L.simulate(st, ROOMS, 'breaks', 'david', 'shelf', { optional: true }).lines);
   const second = Array.from(L.simulate(st, ROOMS, 'breaks', 'david', 'shelf', { optional: true, choose: 1 }).lines);
   assert.ok(first.includes('Mopped.') && !first.includes('Left it.'));
@@ -331,4 +331,36 @@ test('"after", "needs" and "only" may be written as a single name instead of a l
   assert.deepEqual(plain(L.list('one')), ['one']);
   assert.deepEqual(plain(L.list(null)), []);
   assert.deepEqual(plain(L.list(['a', 'b'])), ['a', 'b']);
+});
+
+/* ---------- Round 2 minor fixes ---------- */
+test('pauseKey: Esc and P open the pause menu, but not when the key is held down', () => {
+  assert.equal(L.pauseKey({ key: 'Escape' }), true);
+  assert.equal(L.pauseKey({ key: 'p', code: 'KeyP' }), true);
+  assert.equal(L.pauseKey({ key: 'Escape', repeat: true }), false);
+  assert.equal(L.pauseKey({ key: 'p', code: 'KeyP', repeat: true }), false);
+  assert.equal(L.pauseKey({ key: 'e', code: 'KeyE' }), false);
+});
+
+test('the gold marker never draws above the top of the canvas', () => {
+  let minY = Infinity;
+  const ctx = { fillStyle: '', fillRect: (x, y) => { minY = Math.min(minY, y); } };
+  for (let t = 0; t < 7; t += 0.05) w.ART.marker(ctx, 40, 8, t);
+  assert.ok(minY >= 0, 'marker reaches y = ' + minY);
+});
+
+/* ---------- the title picture is a scene from the game ---------- */
+test('the title scene is the renovated bathroom, tidy, with the three personas facing the viewer', () => {
+  const sc = L.titleScene(ROOMS);
+  assert.equal(sc.room, 'bathroom');
+  assert.equal(sc.state.variant, 'new');
+  assert.deepEqual(Array.from(sc.actors, a => a.look), ['david', 'maya', 'elena']);
+  const b = ROOMS.rooms.bathroom.bounds;
+  for (const a of sc.actors) {
+    assert.equal(a.dir, 'down');
+    assert.ok(a.x > b.x0 * 16 && a.x < b.x1 * 16, a.look + ' stands inside the room');
+  }
+  const kinds = Array.from(ROOMS.visible('bathroom', sc.state), it => it.kind);
+  for (const k of ['boxes', 'toolbox', 'plunger', 'valve', 'manual', 'stool', 'tilewall']) assert.ok(!kinds.includes(k), k + ' should not be in the title scene');
+  assert.equal(sc.zoom, 24 / (b.x1 - b.x0), 'the room is enlarged to fill the width of the screen');
 });

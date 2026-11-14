@@ -1,5 +1,6 @@
 /* art.js — drawing primitives, 3x5 pixel font, characters and room shells.
-   Everything is drawn in code on a 384x224 canvas. No image files are read.
+   Everything here is drawn in code, in 384x224 game pixels. Where sprites.js has an image sprite
+   for a room, an object or a person, that is shown instead; this file is the fallback.
    Loaded first. Sets window.ART. */
 (function (root) {
   'use strict';
@@ -151,6 +152,7 @@
 
   /* Persona cards reuse the character renderer as a portrait. */
   function portrait(canvas, look) {
+    if (root.SPRITES && typeof look === 'string' && root.SPRITES.portrait(canvas, look)) return;   // image sprite, if loaded
     canvas.width = 20; canvas.height = 28;
     var ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, 20, 28);
@@ -164,6 +166,7 @@
   function shell(ctx, room, variant, opts) {
     opts = opts || {};
     var b = opts.bounds || BOUNDS;
+    var WALL_H = opts.wallH || 48;                   // a room may have a taller back wall than the usual three rows
     var x0 = b.x0 * T, x1 = b.x1 * T, y1 = b.y1 * T, w = x1 - x0;
     var x, y, i;
     r(ctx, 0, 0, W, H, PAL.shadow);
@@ -214,6 +217,8 @@
       for (y = WALL_H + 31; y < y1; y += 32) r(ctx, x0, y, w, 1, PAL.greyDark);
       for (x = x0 + 12; x < x1; x += 64) r(ctx, x, WALL_H + 10, 6, 1, PAL.greyLight);
     }
+    // nothing spills past the side walls (a room may start part-way through a tile)
+    r(ctx, 0, 0, x0, H, PAL.shadow); r(ctx, x1, 0, W - x1, H, PAL.shadow);
     // wall-to-floor line and room edges
     r(ctx, x0, WALL_H, w, 1, PAL.ink);
     r(ctx, x0 - 2, 0, 2, y1 + 2, PAL.ink);
@@ -223,7 +228,8 @@
 
   /* Bobbing gold diamond shown over required objects. cx = centre x, y = top of the object. */
   function marker(ctx, cx, y, t) {
-    var by = Math.round(y - 9 + Math.sin((t || 0) * 4) * 1.5);
+    // never above the canvas: the marker over a door near the top would otherwise lose its tip
+    var by = Math.max(1, Math.round(y - 9 + Math.sin((t || 0) * 4) * 1.5));
     cx = Math.round(cx);
     shape(ctx, cx, by, [[-1, 0, 2, 1, PAL.gold], [-2, 1, 4, 1, PAL.gold], [-3, 2, 6, 2, PAL.gold],
       [-2, 4, 4, 1, PAL.goldDark], [-1, 5, 2, 1, PAL.goldDark]]);

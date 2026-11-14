@@ -112,9 +112,11 @@ for (const p of PATHS) {
 
   test(p.name + ': takes 4 to 6 minutes', () => {
     const short = L.simulate(STORY, ROOMS, p.levelId, p.personaId, p.pick);
-    const long = L.simulate(STORY, ROOMS, p.levelId, p.personaId, p.pick, { optional: true });
     assert.ok(short.seconds >= 240, 'required objects only: ' + Math.round(short.seconds) + ' s is under 4 minutes');
-    assert.ok(long.seconds <= 360, 'with every optional object: ' + Math.round(long.seconds) + ' s is over 6 minutes');
+    for (const choose of [0, 1]) {          // the second options include "live with it a bit longer"
+      const long = L.simulate(STORY, ROOMS, p.levelId, p.personaId, p.pick, { optional: true, choose });
+      assert.ok(long.seconds <= 360, 'with every optional object (choices: option ' + (choose + 1) + '): ' + Math.round(long.seconds) + ' s is over 6 minutes');
+    }
   });
 }
 
@@ -148,12 +150,15 @@ function allLines(opts) {
 
 test('nothing a player can read mentions Kova, solutions, opportunities or a research label', () => {
   const banned = [/kova/i, /pain point/i, /\bsolution/i, /opportunit/i, /journey map/i, /\bstage\b/i, /persona/i, /touchpoint/i];
+  /* One exception: "The Complete Solution" is part of a Kohler product name printed on the box (FACTS.homeDepot.boxName). */
+  const productName = STORY.facts.homeDepot.boxName;
+  const strip = str => str.split(productName).join('');
   for (const choose of [0, 1]) {
     for (const { path, line } of allLines({ choose })) {
-      for (const re of banned) assert.doesNotMatch(line, re, path.name + ': "' + line + '"');
+      for (const re of banned) assert.doesNotMatch(strip(line), re, path.name + ': "' + line + '"');
     }
   }
-  for (const re of banned.slice(0, 4)) assert.doesNotMatch(JSON.stringify(STORY), re);
+  for (const re of banned.slice(0, 4)) assert.doesNotMatch(strip(JSON.stringify(STORY)), re);
 });
 
 test('voice rules: no "accessible" anywhere, and Elena never says "extends my life"', () => {
@@ -165,10 +170,19 @@ test('voice rules: no "accessible" anywhere, and Elena never says "extends my li
   }
 });
 
-test('no interviewee from the research is named', () => {
-  const names = [/dorfman/i, /wen yang/i, /amogh/i, /morye/i, /coker/i, /aftab/i, /\bsait\b/i, /howlett/i];
+/* The list of names is private research data, so it is not in this repository. It is read from
+   source-notes/interviewee-names.txt next to the repository (or the file named in INTERVIEWEE_NAMES);
+   without that file the check is skipped. */
+const NAMES_FILE = process.env.INTERVIEWEE_NAMES || require('node:path').join(__dirname, '..', '..', '..', 'source-notes', 'interviewee-names.txt');
+const HAVE_NAMES = require('node:fs').existsSync(NAMES_FILE);
+test('no interviewee from the research is named', { skip: HAVE_NAMES ? false : 'the private name list is not on this computer' }, () => {
+  const names = require('node:fs').readFileSync(NAMES_FILE, 'utf8').split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  assert.ok(names.length > 0, 'the name list is empty');
   const text = JSON.stringify(STORY) + allLines().map(x => x.line).join('\n');
-  for (const re of names) assert.doesNotMatch(text, re);
+  for (const name of names) {
+    const re = new RegExp('\\b' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    assert.doesNotMatch(text, re, 'a name from the private list appears in the game text');
+  }
 });
 
 test('the title and text say Kohler', () => {
@@ -207,4 +221,110 @@ test('stage names are for mapping only: none is shown to the player', () => {
   for (const s of ['First Search', 'Compare Online', 'Check Stock', 'See Kohler on Display', 'Ask an Associate', 'Arrange Install', 'Live With It']) {
     assert.ok(!text.includes(s), 'the stage name "' + s + '" appears in the game text');
   }
+});
+
+/* ---------- Round 2: Level 1 is a slow decline, not an emergency ---------- */
+test('Level 1 is called "Not What It Used to Be" and pitches a fixture that still works', () => {
+  const lv = level('breaks');
+  assert.equal(lv.name, 'Not What It Used to Be');
+  assert.match(lv.pitch, /still works/i);
+});
+
+test('Level 1 has no leak, puddle, towels, slip, fall or injury anywhere a player can read', () => {
+  const banned = /\bleak|puddle|towel|\bslip|\bhip\b|bruise|\bfell\b|\bfall\b|nearly went down|injur|hurt|urgent|emergency/i;
+  for (const choose of [0, 1]) {
+    for (const { path, line } of allLines({ choose })) {
+      if (path.levelId === 'breaks') assert.doesNotMatch(line, banned, path.name + ': "' + line + '"');
+    }
+  }
+  for (const id of ['david', 'elena']) assert.doesNotMatch(STORY.personas[id].trigger.breaks, banned);
+});
+
+test('Level 1: leaving home offers to live with it a bit longer, and that choice is remembered', () => {
+  for (const pid of ['david', 'elena']) {
+    const now = L.simulate(STORY, ROOMS, 'breaks', pid, 'shelf');
+    const later = L.simulate(STORY, ROOMS, 'breaks', pid, 'shelf', { choose: 1 });
+    assert.deepEqual(Array.from(later.errors), []);
+    assert.ok(!now.state.flags.waited, pid + ': going now should not set waited');
+    assert.equal(later.state.flags.waited, true, pid + ': living with it should set waited');
+    assert.ok(Array.from(now.lines).some(l => /live with it/i.test(l)), pid + ': the choice is offered');
+    const card = s => { const st = L.newState('breaks', pid); st.flags.waited = s; st.actIdx = 2; return L.text(level('breaks').acts[2].card.time, st); };
+    assert.notEqual(card(true), card(false), 'the store card changes when the player waited');
+    assert.notDeepEqual(Array.from(now.ending), Array.from(later.ending), pid + ': the ending remembers the wait');
+  }
+});
+
+test('Level 1: booking the plumber changes a line in the last act', () => {
+  const s0 = L.newState('breaks', 'david'); s0.actIdx = 3;
+  const s1 = L.newState('breaks', 'david'); s1.actIdx = 3; s1.flags.plumber = true;
+  const read = s => { const r = L.createRunner(level('breaks').acts[3].intro || [], s); const o = []; let b; while ((b = r.next())) o.push(b.text); return o.join('|'); };
+  assert.notEqual(read(s0), read(s1));
+});
+
+test('Level 2: waiting another year changes the ending', () => {
+  const lv = level('project');
+  for (const pid of ['maya', 'elena']) {
+    const a = L.newState('project', pid); a.pick = 'mix';
+    const b = L.newState('project', pid); b.pick = 'mix'; b.flags.waited = true;
+    assert.notDeepEqual(Array.from(lv.ending(a)), Array.from(lv.ending(b)), pid);
+  }
+});
+
+test('sign words live in story.js, and the aisle sign follows the Level 1 facts', () => {
+  const sg = STORY.signs;
+  assert.ok(sg && sg.kohler && sg.proDesk && sg.exit && sg.bath && sg.aisle);
+  assert.equal(sg.aisle, STORY.facts.homeDepot.aisle.split(',')[0].toUpperCase());
+});
+
+/* ---------- Round 3: Kohler facts checked against Kohler's own spec sheets (13 Nov 2026) ---------- */
+function boxText(personaId, pick) {
+  const s = L.newState('breaks', personaId); s.actIdx = 3; s.pick = pick;
+  const run = L.createRunner(level('breaks').acts[3].things.box.steps, s), out = [];
+  let b; while ((b = run.next())) out.push(b.text);
+  return out.join(' ');
+}
+
+test('Level 1: what is in the box depends on what was bought', () => {
+  const f = STORY.facts;
+  assert.ok(f.homeDepot.inBox && f.kohlerSite.inBox, 'FACTS lists the box contents for both Kohler toilets');
+  for (const pid of ['david', 'elena']) {
+    const shelf = boxText(pid, 'shelf'), site = boxText(pid, 'kohlercom'), other = boxText(pid, 'other');
+    assert.ok(shelf.includes(f.homeDepot.inBox), 'the shelf box shows the Home Depot contents');
+    assert.ok(site.includes(f.kohlerSite.inBox), 'the kohler.com box shows the kohler.com contents');
+    assert.match(shelf, /wax ring/i); assert.doesNotMatch(shelf, /no wax ring/i);
+    assert.match(shelf, /no supply line/i);
+    assert.match(site, /No seat, wax ring or supply line/);
+    assert.equal(new Set([shelf, site, other]).size, 3, pid + ': three different boxes');
+  }
+});
+
+test('Level 1: the kohler.com ending names the parts that box really lacks', () => {
+  const r = L.simulate(STORY, ROOMS, 'breaks', 'david', 'kohlercom');
+  assert.match(Array.from(r.ending).join(' '), /a seat and a wax ring/);
+});
+
+test('claims that did not survive the fact check are gone', () => {
+  const gone = [/14-page/i, /four languages/i, /No installation offered/i, /sixty pounds/i, /Kohler suite/i, /QR code to register/i, /wants my email/i];
+  for (const choose of [0, 1]) {
+    for (const { path, line } of allLines({ choose })) {
+      for (const re of gone) assert.doesNotMatch(line, re, path.name + ': "' + line + '"');
+    }
+  }
+});
+
+test('models are named the way Kohler names them', () => {
+  const f = STORY.facts;
+  assert.equal(f.homeDepot.boxName, 'Highline Arc The Complete Solution');
+  assert.equal(f.kohlerSite.number, 'K-43999-0');
+  const l1 = allLines().filter(x => x.path.levelId === 'breaks').map(x => x.line).join('\n');
+  assert.ok(l1.includes(f.homeDepot.boxName), 'the shelf box shows its full name');
+  assert.match(l1, /Installation extra, in some ZIP codes/);
+  const l2 = allLines().filter(x => x.path.levelId === 'project').map(x => x.line).join('\n');
+  assert.match(l2, /One Kohler collection/);
+});
+
+test('the title screen credits the art and points to the credits file', () => {
+  assert.match(STORY.ui.credits, /Liberated Pixel Cup/);
+  assert.match(STORY.ui.credits, /CC-BY-SA/);
+  assert.match(STORY.ui.credits, /CREDITS\.md/);
 });
